@@ -92,7 +92,7 @@ def run_bot() -> None:
     application.add_handler(CommandHandler("push", push_command))
     application.add_handler(CommandHandler("board", board_command))
     application.add_handler(CommandHandler("create_task", create_task_command))
-    application.add_handler(CommandHandler("create-task", create_task_command))
+    # application.add_handler(CommandHandler("create-task", create_task_command))
 
     # Register callback query handlers
     application.add_handler(CallbackQueryHandler(board_callback_handler))
