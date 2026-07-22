@@ -1,4 +1,5 @@
 import logging
+import os
 import re
 from telegram import Update
 from telegram.ext import ContextTypes
@@ -60,7 +61,14 @@ async def plan_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
         title = first_line.lstrip("#").strip()
         filename = f"{sanitize_filename(title)}.md"
         
-        with open(filename, "w", encoding="utf-8") as f:
+        plans_dir = os.environ.get("PLANS_DIR", "")
+        if plans_dir:
+            os.makedirs(plans_dir, exist_ok=True)
+            filepath = os.path.join(plans_dir, filename)
+        else:
+            filepath = filename
+            
+        with open(filepath, "w", encoding="utf-8") as f:
             f.write(formatted_markdown)
             
         # Reply to the user with the formatted plan

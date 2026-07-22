@@ -1,0 +1,15 @@
+# fly.toml app configuration file generated for project-manager-bot
+
+app = "project-manager-bot"
+primary_region = "bos"
+
+[build]
+  dockerfile = "Dockerfile"
+
+[env]
+  PLANS_DIR = "/data"
+
+[[mounts]]
+  source = "bot_data"
+  destination = "/data"
+  initial_size = "1gb"
