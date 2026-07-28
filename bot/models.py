@@ -16,3 +16,13 @@ class Lock(BaseModel):
     locked_by_username: Optional[str] = None
     locked_at: Optional[datetime] = None
     status: str = Field(default="todo")  # todo | doing | done
+
+class User(BaseModel):
+    id: Optional[int] = None
+    github_id: Optional[int] = None
+    username: str
+    email: Optional[str] = None
+    avatar_url: Optional[str] = None
+    access_token: Optional[str] = None
+    created_at: Optional[datetime] = None
+

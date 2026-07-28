@@ -1,7 +1,12 @@
 import os
 import httpx
 import logging
-from dotenv import load_dotenv
+
+try:
+    from dotenv import load_dotenv
+except ImportError:  # pragma: no cover - fallback for deployment images without python-dotenv
+    def load_dotenv() -> bool:
+        return False
 
 load_dotenv()
 

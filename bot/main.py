@@ -1,17 +1,33 @@
 import logging
 import os
 import asyncio
-from dotenv import load_dotenv
+
+try:
+    from dotenv import load_dotenv
+except ImportError:  # pragma: no cover
+    def load_dotenv() -> bool:
+        return False
+
 from telegram import Update
 from telegram.ext import (
     Application,
     CommandHandler,
     CallbackQueryHandler,
+    MessageHandler,
+    filters,
     ContextTypes,
 )
+from telegram.request import HTTPXRequest
 
-from bot import db, locking
-from bot.commands.plan import plan_command
+from bot.commands.auth import login_command, logout_command
+from bot.commands.repo import repo_command, repo_callback_handler
+from bot.commands.plan import (
+    plan_command,
+    edit_command,
+    save_draft_callback_handler,
+    plan_callback_handler,
+    plan_feedback_message_handler,
+)
 from bot.commands.push import push_command, push_callback_handler
 from bot.commands.board import board_command, board_callback_handler
 from bot.commands.create_task import create_task_command
@@ -36,44 +52,19 @@ async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
         "🤖 *Welcome to the Telegram → GitHub Project Manager Bot!*\n\n"
         "I will help you capture project ideas, format them with Groq, "
         "push them as GitHub issues, and manage them on an interactive board.\n\n"
-        "📋 *Available Commands:*\n"
-        "💡 `/plan <idea>` - Draft and structure an idea, saving it locally as a file and in your drafts.\n"
+        "🔑 *Authentication:*\n"
+        "🔗 `/login` - Link your Telegram user to your GitHub account.\n"
+        "🚪 `/logout` - Disassociate your GitHub account.\n"
+        "📁 `/repo` - Select one of your write-accessible repositories.\n\n"
+        "📋 *Project Commands:*\n"
+        "💡 `/plan <idea>` - Draft and structure an idea, saving it locally as a file and in drafts.\n"
         "🚀 `/push` - Push the latest draft to GitHub as a TODO issue.\n"
         "🛠 `/create_task [title]` - Create a single task issue manually, or parse all task items from your draft to bulk-create them.\n"
         "📊 `/board` - Display the Kanban board to claim or complete tasks.\n\n"
-        "Get started by running `/plan <your project idea>`!"
+        "To get started, please run `/login` to link your GitHub account!"
     )
     await update.message.reply_text(welcome_text, parse_mode="Markdown")
 
-async def stale_lock_cleanup_loop(application: Application):
-    """
-    Background loop that runs periodically to release stale claims.
-    """
-    logger.info("Stale lock cleanup loop started.")
-    while True:
-        try:
-            # Check every 5 minutes (300 seconds)
-            await asyncio.sleep(300)
-            logger.info("Checking for expired locks...")
-            expired_locks = await locking.expire_stale_locks()
-            if expired_locks:
-                logger.info(f"Automatically expired {len(expired_locks)} locks: {expired_locks}")
-        except asyncio.CancelledError:
-            logger.info("Stale lock cleanup loop cancelled.")
-            break
-        except Exception as e:
-            logger.exception("Error in stale lock cleanup loop:")
-
-async def post_init(application: Application) -> None:
-    """
-    Post-initialization hook to setup the DB and start background tasks.
-    """
-    logger.info("Initializing SQLite database...")
-    db.init_db()
-    
-    # Run the stale lock cleanup loop in the background
-    logger.info("Starting background tasks...")
-    asyncio.create_task(stale_lock_cleanup_loop(application))
 
 def run_bot() -> None:
     """
@@ -84,19 +75,30 @@ def run_bot() -> None:
         return
 
     logger.info("Building Telegram Application...")
-    application = Application.builder().token(TELEGRAM_BOT_TOKEN).post_init(post_init).build()
+    # request = HTTPXRequest(http2=False)
+    application = Application.builder().token(TELEGRAM_BOT_TOKEN).build()
 
     # Register command handlers
     application.add_handler(CommandHandler("start", start_command))
+    application.add_handler(CommandHandler("login", login_command))
+    application.add_handler(CommandHandler("logout", logout_command))
+    application.add_handler(CommandHandler("repo", repo_command))
     application.add_handler(CommandHandler("plan", plan_command))
+    application.add_handler(CommandHandler("edit", edit_command))
     application.add_handler(CommandHandler("push", push_command))
     application.add_handler(CommandHandler("board", board_command))
     application.add_handler(CommandHandler("create_task", create_task_command))
-    # application.add_handler(CommandHandler("create-task", create_task_command))
 
     # Register callback query handlers
-    application.add_handler(CallbackQueryHandler(board_callback_handler))
+    application.add_handler(CallbackQueryHandler(repo_callback_handler, pattern="^select_repo:"))
     application.add_handler(CallbackQueryHandler(push_callback_handler, pattern="^push_draft:"))
+    application.add_handler(CallbackQueryHandler(save_draft_callback_handler, pattern="^save_draft:"))
+    application.add_handler(CallbackQueryHandler(plan_callback_handler, pattern="^resend_ai:"))
+    # Fallback to handle board callbacks
+    application.add_handler(CallbackQueryHandler(board_callback_handler))
+
+    # Register message handlers (for plan feedback)
+    application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, plan_feedback_message_handler))
 
     logger.info("Starting polling loop. Press Ctrl+C to stop.")
     application.run_polling(allowed_updates=Update.ALL_TYPES)

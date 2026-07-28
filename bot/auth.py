@@ -29,7 +29,11 @@ async def is_user_admin(update: Update, context: ContextTypes.DEFAULT_TYPE) -> b
         except ValueError:
             logger.error("Invalid ADMIN_USER_IDS format in environment config. Must be comma-separated integers.")
 
-    # 2. Check chat administrators if we are in a group/supergroup/channel
+    # 2. Allow direct/private chats when no admin list is configured.
+    if not admin_ids_str and chat and chat.type == chat.PRIVATE:
+        return True
+
+    # 3. Check chat administrators if we are in a group/supergroup/channel
     if chat and chat.type in [chat.GROUP, chat.SUPERGROUP, chat.CHANNEL]:
         try:
             member = await context.bot.get_chat_member(chat_id=chat.id, user_id=user_id)
