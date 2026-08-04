@@ -260,7 +260,8 @@ async def github_oauth_callback(code: str, state: Optional[str] = None):
                 "email": user.email,
                 "avatar_url": user.avatar_url,
                 "telegram_id": user.telegram_id,
-                "active_repo": user.active_repo
+                "active_repo": user.active_repo,
+                "role": user.role
             }
         }
 
@@ -319,7 +320,8 @@ async def github_token_login(body: GitHubTokenRequest):
                 "email": user.email,
                 "avatar_url": user.avatar_url,
                 "telegram_id": user.telegram_id,
-                "active_repo": user.active_repo
+                "active_repo": user.active_repo,
+                "role": user.role
             }
         }
 
@@ -349,7 +351,8 @@ async def register_user(body: RegisterRequest):
             "github_id": user.github_id,
             "username": user.username,
             "email": user.email,
-            "avatar_url": user.avatar_url
+            "avatar_url": user.avatar_url,
+            "role": user.role
         }
     }
 
@@ -375,7 +378,8 @@ async def login_user(body: LoginRequest):
             "github_id": user.github_id,
             "username": user.username,
             "email": user.email,
-            "avatar_url": user.avatar_url
+            "avatar_url": user.avatar_url,
+            "role": user.role
         }
     }
 
@@ -394,6 +398,7 @@ async def get_me(current_user: User = Depends(get_current_user)):
             "email": current_user.email,
             "avatar_url": current_user.avatar_url,
             "telegram_id": current_user.telegram_id,
-            "active_repo": current_user.active_repo
+            "active_repo": current_user.active_repo,
+            "role": current_user.role
         }
     }

@@ -27,6 +27,9 @@ bot/commands/push.py
 bot/commands/repo.py
 core/db_config.py
 core/models.py
+migrations/models/0_20260725223819_init.py
+migrations/models/1_20260725230626_update.py
+migrations/models/2_20260728215951_add_role_to_user.py
 project_manager_bot.egg-info/PKG-INFO
 project_manager_bot.egg-info/SOURCES.txt
 project_manager_bot.egg-info/dependency_links.txt

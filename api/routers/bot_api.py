@@ -5,7 +5,7 @@ import re
 from typing import Optional, List
 from fastapi import APIRouter, Depends, HTTPException, status, Header, Body
 from pydantic import BaseModel
-
+from datetime import datetime, timezone
 from core.models import User, Draft, Lock
 from bot import groq_client
 
@@ -133,7 +133,8 @@ async def identify_user(body: IdentifyRequest, _ = Depends(verify_bot_token)):
             "id": user.id,
             "username": user.username,
             "github_id": user.github_id,
-            "active_repo": user.active_repo
+            "active_repo": user.active_repo,
+            "role": user.role
         }
     }
 

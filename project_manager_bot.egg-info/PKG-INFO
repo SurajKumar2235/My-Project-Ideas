@@ -9,7 +9,7 @@ Requires-Dist: httpx>=0.28.1
 Requires-Dist: psycopg2-binary>=2.9.9
 Requires-Dist: pydantic[email]>=2.13.4
 Requires-Dist: python-dotenv>=1.2.2
-Requires-Dist: python-telegram-bot>=22.8
+Requires-Dist: python-telegram-bot[webhooks]>=22.8
 Requires-Dist: requests>=2.34.2
 Requires-Dist: uvicorn>=0.30.0
 Requires-Dist: pyjwt>=2.8.0
@@ -17,63 +17,53 @@ Requires-Dist: tortoise-orm>=0.24.0
 Requires-Dist: asyncpg>=0.30.0
 Requires-Dist: aerich>=0.8.1
 
-# Project Manager Bot (Telegram ➜ GitHub Idea Bot)
+# Project Manager Bot (LogicalFire) 🚀
 
-A Telegram Bot that captures raw, unstructured project ideas from team chats, structures them using AI (via the Groq API), saves them as local project plan files, pushes them to GitHub Issues, and tracks progress using an interactive Kanban board directly in the chat.
-
-## 💡 The Problem This Solves
-
-User/Devloper often discuss a large volume of project ideas, feature requests, and tasks in messaging channels. However:
-1. **Ideas get lost** in chat history.
-2. **Ideas are unstructured**, lacking technical requirements, scope, milestones, or open questions.
-3. **Transition to issue trackers is slow** and manual, requiring copy-pasting and formatting.
-4. **Lack of quick assignments** directly where discussions happen.
-
-### 🚀 The Solution
-This bot solves these issues by:
-* **AI-Assisted Formatting**: Automatically structures any quick idea description into a fully fleshed-out Technical Implementation Plan using high-quality LLMs.
-* **Local Persistence**: Saves the formatted plans directly in the local workspace workspace as `.md` files, named after the project title.
-* **GitHub Sync**: Creates GitHub issues labeled `status:todo` with a single command.
-* **Interactive Kanban Board**: Enables team members to view, claim (`Claim`), release (`Release`), or finish (`Mark Done`) tasks using inline buttons directly in Telegram.
-* **Atomic SQLite Locks**: Guards tasks so only the claimant can release or mark a task done, preventing collision.
+A full-stack, AI-powered project management platform bridging unstructured chat discussions and structured developer workflows. Captures project ideas from **Telegram** or **Web**, formats them into comprehensive technical specifications using **Groq AI (Llama 3.3)**, syncs them as **GitHub Issues**, and tracks task progress via an interactive **Kanban Board** with atomic task locking.
 
 ---
 
-## 🛠️ Configuration & Setup
+## 💡 Key Problems & Solutions
 
-### 1. Prerequisites
-Ensure you have `uv` installed (or use standard Python virtual environments).
+### The Problems
+1. **Lost Ideas**: Unstructured feature requests and project concepts get buried in chat histories.
+2. **Lack of Specification**: Quick idea notes lack technical requirements, milestone breakdowns, or open questions.
+3. **Manual Overhead**: Converting chat ideas to issue trackers is slow, manual, and inconsistent.
+4. **Task Collisions**: Multiple contributors often attempt to work on the same issue without real-time task lock visibility.
 
-### 2. Environment Setup
-Create a `.env` file in the root directory (see `.env` format):
-```env
-TELEGRAM_BOT_TOKEN=your_telegram_bot_token
-GITHUB_TOKEN=your_github_personal_access_token
-GITHUB_REPO=your_github_username/your_repository_name
-GROQ_API_KEY=your_groq_api_key
+### The Solution
+* **AI-Powered Structuring**: Uses high-capacity LLMs via the Groq API (`llama-3.3-70b-versatile`) to format raw text into detailed Markdown project plans.
+* **Dual Interface**: Operate seamlessly from **Telegram** (`/plan`, `/push`, `/board`, `/repo`, `/login`) or via the modern **Web Dashboard**.
+* **GitHub Sync & OAuth**: Authenticate via GitHub OAuth, target specific repositories, create `status:todo` labeled issues, and breakdown plans into actionable task checklists.
+* **Interactive Kanban Board**: Real-time task board to view, claim (`Claim`), release (`Release`), or mark tasks done (`Mark Done`).
+* **Atomic Locking**: Database task locking (`Lock` model) ensures single-claimant safety per card with automatic timeout expirations.
 
-# Model Settings
-GROQ_MODEL_REASONING=llama-3.3-70b-versatile
-GROQ_MODEL_SMALL=llama-3.1-8b-instant
+---
 
-# Lock Expiration Settings
-LOCK_TIMEOUT_HOURS=24
+## 🏗️ Platform Architecture
 
-# Access Control Settings (comma-separated telegram user IDs)
-ADMIN_USER_IDS=123456789,987654321
 ```
-
-### 3. Installation
-Install dependencies and set up the virtual environment:
-```bash
-uv init
-uv sync
-```
-
-### 4. Running the Bot
-Start the bot using `uv`:
-```bash
-uv run main.py
+                  ┌───────────────────────┐
+                  │     Telegram User     │
+                  └───────────┬───────────┘
+                              │ Telegram Bot API
+                              ▼
+                  ┌───────────────────────┐
+                  │     Telegram Bot      │
+                  │   (python-telegram)   │
+                  └───────────┬───────────┘
+                              │ HTTP (X-Bot-Token)
+                              ▼
+┌──────────────┐  ┌───────────────────────┐  ┌──────────────┐
+│  Groq API    │◄─┤   FastAPI Backend     ├─►│  GitHub API  │
+│ (Llama 3.3)  │  │   (REST & Web UI)     │  │ (OAuth/Issues│
+└──────────────┘  └───────────┬───────────┘  └──────────────┘
+                              │ Tortoise ORM
+                              ▼
+                  ┌───────────────────────┐
+                  │ PostgreSQL / SQLite   │
+                  │     (User/Draft/Lock) │
+                  └───────────────────────┘
 ```
 
 ---
@@ -82,22 +72,113 @@ uv run main.py
 
 ```
 project_manager_bot/
-├── bot/
-│   ├── commands/            # Telegram command implementation files
-│   │   ├── board.py         # /board command and inline callbacks
-│   │   ├── create_task.py   # /create-task manual and bulk creation
-│   │   ├── plan.py          # /plan AI formatter & local file creator
-│   │   └── push.py          # /push draft to GitHub issue
+├── api/                     # FastAPI Backend Server & Web UI
+│   ├── auth.py              # GitHub OAuth & JWT Authentication
+│   ├── main.py              # FastAPI Server entry point & CORS configuration
+│   ├── README.md            # Backend REST API documentation
+│   ├── routers/             # Domain endpoints (board, bot_api, drafts, push, repos, tasks)
+│   └── static/              # Web Dashboard UI (HTML5, Vanilla CSS, JS)
+├── bot/                     # Telegram Bot Client
+│   ├── commands/            # Command handlers (/board, /plan, /push, /repo, /auth, /create_task)
+│   ├── api_client.py        # Async HTTP client interfacing with FastAPI backend
 │   ├── auth.py              # User verification and @admin_only decorator
-│   ├── db.py                # SQLite session management & query operations
-│   ├── github_client.py     # GitHub API issue creator and label updater
-│   ├── groq_client.py       # Groq API project plan formatting client
-│   ├── locking.py           # Atomic card locking and expiration business logic
-│   ├── main.py              # Bot initializer and background jobs
-│   └── models.py            # Pydantic schemas for Database mapping
-├── main.py                  # Root entry point
-├── pyproject.toml           # Project dependencies config
-└── README.md                # Root documentation
+│   ├── github_client.py     # GitHub REST API issue manager
+│   ├── groq_client.py       # Groq LLM plan generation interface
+│   ├── locking.py           # Kanban card locking & expiration engine
+│   ├── main.py              # Bot polling loop initializer
+│   ├── models.py            # Pydantic schemas
+│   └── README.md            # Detailed Bot implementation guide
+├── core/                    # Core Infrastructure & Database Models
+│   ├── db_config.py         # Tortoise ORM database configuration
+│   └── models.py            # Database Entities (User, Draft, Lock)
+├── migrations/              # Aerich database migration files
+├── main.py                  # Root entry point to launch Telegram bot
+├── pyproject.toml           # UV project dependencies & configuration
+└── README.md                # Project documentation root
 ```
 
-For a detailed walkthrough of each module's internal functions, classes, and routing, refer to the [Bot Walkthrough README](bot/README.md).
+For module-specific walkthroughs:
+* 📖 [Telegram Bot Walkthrough](bot/README.md)
+* ⚡ [FastAPI Backend Documentation](api/README.md)
+
+---
+
+## 🛠️ Environment & Setup
+
+### 1. Prerequisites
+Ensure you have [`uv`](https://github.com/astral-sh/uv) or standard Python 3.13+ installed.
+
+### 2. Configuration (`.env`)
+Create a `.env` file in the root directory:
+
+```env
+# Database Settings
+DATABASE_URL=postgres://user:password@localhost:5432/logicalfire_db
+# (Fallback to SQLite 'db.sqlite3' if omitted)
+
+# Backend Security
+BOT_API_SECRET=your_secure_bot_secret_token
+JWT_SECRET=your_super_secret_jwt_key
+BACKEND_URL=http://localhost:8000
+
+# GitHub OAuth Credentials
+GITHUB_CLIENT_ID=your_github_client_id
+GITHUB_CLIENT_SECRET=your_github_client_secret
+GITHUB_REDIRECT_URI=http://localhost:8000/auth/github/callback
+
+# Telegram Bot
+TELEGRAM_BOT_TOKEN=your_telegram_bot_token
+
+# Groq AI Settings
+GROQ_API_KEY=your_groq_api_key
+GROQ_MODEL_REASONING=llama-3.3-70b-versatile
+GROQ_MODEL_SMALL=llama-3.1-8b-instant
+
+# Business Logic Configuration
+LOCK_TIMEOUT_HOURS=24
+ADMIN_USER_IDS=123456789,987654321
+```
+
+### 3. Installation
+Install dependencies with `uv`:
+```bash
+uv sync
+```
+
+---
+
+## 🚀 Running the Platform
+
+### Start the FastAPI Backend Server
+```bash
+uv run uvicorn api.main:app --host 0.0.0.0 --port 8000 --reload
+```
+* **Interactive API Documentation**: [http://localhost:8000/docs](http://localhost:8000/docs)
+* **Web Dashboard**: [http://localhost:8000](http://localhost:8000)
+
+### Start the Telegram Bot
+In a separate terminal:
+```bash
+uv run main.py
+```
+
+---
+
+## 💬 Bot Commands Reference
+
+| Command | Description |
+| :--- | :--- |
+| `/start` | Welcome message and command guide. |
+| `/login` | Link Telegram user account to GitHub OAuth. |
+| `/logout` | Unlink GitHub account. |
+| `/repo` | Select target GitHub repository for issues/board. |
+| `/plan <idea>` | Format unstructured idea into AI Markdown plan draft. |
+| `/edit <feedback>`| Request AI revisions on the current draft. |
+| `/push` | Push approved draft to GitHub as a `status:todo` issue. |
+| `/create_task [title]` | Manually create a task or bulk-parse checklist tasks from draft. |
+| `/board` | Render interactive Kanban board (Claim/Release/Mark Done). |
+
+---
+
+## 📄 License
+MIT License.

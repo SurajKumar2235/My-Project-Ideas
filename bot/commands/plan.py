@@ -5,7 +5,7 @@ from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ContextTypes
 from bot import api_client
 from bot.commands.auth import ensure_authenticated
-from bot.auth import admin_only
+from bot.auth import admin_only, is_user_admin
 
 logger = logging.getLogger(__name__)
 

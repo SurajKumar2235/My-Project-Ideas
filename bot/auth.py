@@ -1,7 +1,7 @@
 import os
 import logging
 from functools import wraps
-from telegram import Update
+from telegram import Update, Chat
 from telegram.ext import ContextTypes
 
 logger = logging.getLogger(__name__)
@@ -30,11 +30,11 @@ async def is_user_admin(update: Update, context: ContextTypes.DEFAULT_TYPE) -> b
             logger.error("Invalid ADMIN_USER_IDS format in environment config. Must be comma-separated integers.")
 
     # 2. Allow direct/private chats when no admin list is configured.
-    if not admin_ids_str and chat and chat.type == chat.PRIVATE:
+    if not admin_ids_str and chat and chat.type == Chat.PRIVATE:
         return True
 
     # 3. Check chat administrators if we are in a group/supergroup/channel
-    if chat and chat.type in [chat.GROUP, chat.SUPERGROUP, chat.CHANNEL]:
+    if chat and chat.type in [Chat.GROUP, Chat.SUPERGROUP, Chat.CHANNEL]:
         try:
             member = await context.bot.get_chat_member(chat_id=chat.id, user_id=user_id)
             if member.status in ["creator", "administrator"]:

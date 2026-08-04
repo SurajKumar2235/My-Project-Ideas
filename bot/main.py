@@ -50,7 +50,7 @@ async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
     """
     welcome_text = (
         "🤖 *Welcome to the Telegram → GitHub Project Manager Bot!*\n\n"
-        "I will help you capture project ideas, format them with Groq, "
+        "I will help you capture project ideas, format them with LLM, "
         "push them as GitHub issues, and manage them on an interactive board.\n\n"
         "🔑 *Authentication:*\n"
         "🔗 `/login` - Link your Telegram user to your GitHub account.\n"
@@ -100,8 +100,21 @@ def run_bot() -> None:
     # Register message handlers (for plan feedback)
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, plan_feedback_message_handler))
 
-    logger.info("Starting polling loop. Press Ctrl+C to stop.")
-    application.run_polling(allowed_updates=Update.ALL_TYPES)
+    webhook_url = os.environ.get("TELEGRAM_WEBHOOK_URL")
+    if webhook_url:
+        webhook_port = int(os.environ.get("TELEGRAM_WEBHOOK_PORT", "8000"))
+        webhook_listen = os.environ.get("TELEGRAM_WEBHOOK_LISTEN", "0.0.0.0")
+        url_path = os.environ.get("TELEGRAM_WEBHOOK_URL_PATH", "")
+        logger.info("Webhook server starting at %s:%s...", webhook_listen, webhook_port)
+        application.run_webhook(
+            listen=webhook_listen,
+            port=webhook_port,
+            url_path=url_path,
+            webhook_url=f"{webhook_url.rstrip('/')}/{url_path.lstrip('/')}" if url_path else webhook_url,
+        )
+    else:
+        logger.info("Starting polling loop. Press Ctrl+C to stop.")
+        application.run_polling(allowed_updates=Update.ALL_TYPES)
 
 
 if __name__ == "__main__":
