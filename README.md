@@ -71,16 +71,74 @@ project_manager_bot/
 │   └── README.md            # Detailed Bot implementation guide
 ├── core/                    # Core Infrastructure & Database Models
 │   ├── db_config.py         # Tortoise ORM database configuration
-│   └── models.py            # Database Entities (User, Draft, Lock)
+│   ├── models.py            # Database Entities (User, Draft, Lock)
+│   └── Readme.md            # Core models and migration documentation
 ├── migrations/              # Aerich database migration files
 ├── main.py                  # Root entry point to launch Telegram bot
 ├── pyproject.toml           # UV project dependencies & configuration
 └── README.md                # Project documentation root
 ```
 
+## 🧠 Database Models & Subscription Architecture
+
+The core database is defined in `core/models.py` using Tortoise ORM. It includes the following entities:
+
+- `User`: primary identity for each person. Stores GitHub and Telegram link data, the current active repo, and a `role` value for permissions.
+- `ChannelRepo`: maps a user to a GitHub repo and a Telegram channel/group. This row is used to calculate the per-project subscription bonus for daily token grants.
+- `UserPlanningToken`: a fixed planning token assigned to a user when they register a project or request a plan. A planning action consumes a token and helps the bot associate AI-generated drafts with the requesting user.
+- `TokenWallet`: subscription balance for planning credits. Each day, users receive a base grant plus an additional bonus for every active project they own.
+- `TokenTransaction`: append-only ledger of every token movement, including daily grants, spend events, and top-up purchases.
+- `Draft`: stores AI-generated draft content and the target repo or chat context.
+- `Lock`: enforces atomic task ownership on GitHub issue locks for the Kanban board, with unique `(repo, issue_number)` semantics.
+
+### Subscription Model Overview
+
+The subscription model is implemented by `TokenWallet` and `TokenTransaction`:
+
+- Every user gets a daily token refill based on a rule such as:
+  - `daily_grant = BASE_DAILY_TOKENS + (PER_PROJECT_TOKENS * active_project_count)`
+- `active_project_count` is derived from the number of `ChannelRepo` rows linked to the user.
+- `TokenWallet.balance` is the user's current spendable planning credit. It is updated by daily refill grants and by spends when the user generates a plan or draft.
+- `TokenTransaction` keeps an audit trail for each balance change, including:
+  - `daily_grant` for scheduled subscription top-ups
+  - `spend` for plan/draft generation or other token usage
+  - `purchase` for manual top-ups or star purchases
+
+This architecture keeps token accounting auditable, prevents double-grants by tracking `last_refill_date`, and allows unused credits to carry over unless business rules change.
+
+### Migration Guide
+
+This project uses Aerich with Tortoise ORM for database migrations. Existing migration files live under `migrations/models/`.
+
+Common migration workflow:
+
+1. Update `core/models.py` with the new field or model change.
+2. Create a new migration from the repository root:
+   ```bash
+   python -m aerich migrate --name add_my_field
+   ```
+3. Apply the migration to the database:
+   ```bash
+   python -m aerich upgrade
+   ```
+
+If you are initializing a new database for the first time, run:
+
+```bash
+python -m aerich init -t core.db_config.TORTOISE_ORM
+python -m aerich init-db
+```
+
+For an existing project, use `python -m aerich upgrade` after adding migrations.
+
+> Note: make sure `DATABASE_URL` is configured in `.env` before running Aerich.
+
+---
+
 For module-specific walkthroughs:
 * 📖 [Telegram Bot Walkthrough](bot/README.md)
 * ⚡ [FastAPI Backend Documentation](api/README.md)
+* 🧩 [Database Models & Migration Guide](core/Readme.md)
 
 ---
 
