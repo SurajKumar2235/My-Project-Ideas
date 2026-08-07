@@ -20,24 +20,26 @@ async def is_user_admin(update: Update, context: ContextTypes.DEFAULT_TYPE) -> b
     chat = update.effective_chat
 
     # 1. Check global admin IDs in .env (comma-separated list of IDs)
-    admin_ids_str = os.environ.get("ADMIN_USER_IDS", "")
-    if admin_ids_str:
-        try:
-            global_admins = [int(x.strip()) for x in admin_ids_str.split(",") if x.strip()]
-            if user_id in global_admins:
-                return True
-        except ValueError:
-            logger.error("Invalid ADMIN_USER_IDS format in environment config. Must be comma-separated integers.")
+    # admin_ids_str = os.environ.get("ADMIN_USER_IDS", "")
+    # if admin_ids_str:
+    #     try:
+    #         global_admins = [int(x.strip()) for x in admin_ids_str.split(",") if x.strip()]
+    #         if user_id in global_admins:
+    #             return True
+    #     except ValueError:
+    #         logger.error("Invalid ADMIN_USER_IDS format in environment config. Must be comma-separated integers.")
 
-    # 2. Allow direct/private chats when no admin list is configured.
-    if not admin_ids_str and chat and chat.type == Chat.PRIVATE:
-        return True
+    # # 2. Allow direct/private chats when no admin list is configured.
+    # if not admin_ids_str and chat and chat.type == Chat.PRIVATE:
+    #     return True
 
     # 3. Check chat administrators if we are in a group/supergroup/channel
     if chat and chat.type in [Chat.GROUP, Chat.SUPERGROUP, Chat.CHANNEL]:
         try:
+            logger.info(f"Checking if user {user_id} is an admin in chat {chat.id}")
             member = await context.bot.get_chat_member(chat_id=chat.id, user_id=user_id)
             if member.status in ["creator", "administrator"]:
+                logger.info(f"User {user_id} is an admin in chat {chat.id}")
                 return True
         except Exception as e:
             logger.error(f"Error checking Telegram group admin status for user {user_id}: {e}")

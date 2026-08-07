@@ -2,6 +2,7 @@ import logging
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ContextTypes
 from bot import api_client
+from bot.utils import send_reply, edit_reply
 from bot.commands.auth import ensure_authenticated
 
 logger = logging.getLogger(__name__)
@@ -14,10 +15,14 @@ async def repo_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
     if not await ensure_authenticated(update, context):
         return
 
+    if not update.effective_user:
+        return
+
     user_id = update.effective_user.id
     
     # Send temporary loading message
-    loading_message = await update.message.reply_text(
+    loading_message = await send_reply(
+        update, context,
         "🔍 *Fetching your GitHub repositories... Please wait.*",
         parse_mode="Markdown"
     )
@@ -25,7 +30,7 @@ async def repo_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
     try:
         repos = await api_client.list_user_repos(user_id)
         if not repos:
-            await loading_message.edit_text(
+            await edit_reply(update, context, loading_message,
                 "⚠️ *No write-accessible repositories found.*\n\n"
                 "Please verify that you have collaborator or owner access to repositories on GitHub.",
                 parse_mode="Markdown"
@@ -38,7 +43,7 @@ async def repo_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
             keyboard.append([InlineKeyboardButton(r, callback_data=f"select_repo:{r}")])
 
         reply_markup = InlineKeyboardMarkup(keyboard)
-        await loading_message.edit_text(
+        await edit_reply(update, context, loading_message,
             "📁 *Select an Active Repository:*\n\n"
             "This repository will be used to create issues and track project plans.",
             reply_markup=reply_markup,
@@ -46,7 +51,7 @@ async def repo_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
         )
     except Exception as e:
         logger.error(f"Error listing user repos: {e}")
-        await loading_message.edit_text(
+        await edit_reply(update, context, loading_message,
             f"❌ *Failed to list repositories.* \nError: `{str(e)}`",
             parse_mode="Markdown"
         )
@@ -72,7 +77,7 @@ async def repo_callback_handler(update: Update, context: ContextTypes.DEFAULT_TY
         if success:
             await query.edit_message_text(
                 f"✅ *Active Repository Configured!*\n\n"
-                f"📁 **Selected Repository:** `{repo_name}`\n"
+                f"📁 *Selected Repository:* `{repo_name}`\n"
                 f"All future issues and Kanban cards will sync to this repository.",
                 parse_mode="Markdown"
             )

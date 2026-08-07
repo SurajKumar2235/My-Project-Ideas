@@ -4,6 +4,7 @@ from telegram.ext import ContextTypes
 from bot import api_client
 from bot.commands.auth import ensure_authenticated
 from bot.auth import is_user_admin
+from bot.utils import send_reply, edit_reply
 
 logger = logging.getLogger(__name__)
 
@@ -100,16 +101,20 @@ async def board_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
     if not await ensure_authenticated(update, context):
         return
 
+    if not update.effective_user:
+        return
+
     user_id = update.effective_user.id
     
     # Send loading text
-    loading_message = await update.message.reply_text(
+    loading_message = await send_reply(
+        update, context,
         "📊 *Loading board...*",
         parse_mode="Markdown"
     )
 
     text, reply_markup = await get_board_data(user_id)
-    await loading_message.edit_text(
+    await edit_reply(update, context, loading_message,
         text,
         parse_mode="Markdown",
         reply_markup=reply_markup,

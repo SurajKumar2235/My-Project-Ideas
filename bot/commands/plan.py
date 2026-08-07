@@ -6,6 +6,7 @@ from telegram.ext import ContextTypes
 from bot import api_client
 from bot.commands.auth import ensure_authenticated
 from bot.auth import admin_only, is_user_admin
+from bot.utils import send_reply, edit_reply
 
 logger = logging.getLogger(__name__)
 
@@ -26,12 +27,16 @@ async def plan_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
     if not await ensure_authenticated(update, context):
         return
 
+    if not update.effective_user or not update.effective_chat:
+        return
+
     chat_id = update.effective_chat.id
     user_id = update.effective_user.id
     
     idea_text = " ".join(context.args) if context.args else ""
     if not idea_text:
-        await update.message.reply_text(
+        await send_reply(
+            update, context,
             "💡 Please provide a description of your idea after the command.\n\n"
             "Example:\n"
             "`/plan A simple telegram bot that links ideas to github issues`",
@@ -42,10 +47,16 @@ async def plan_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
     # Clear any previous feedback flags
     context.user_data["waiting_for_feedback"] = None
 
-    loading_message = await update.message.reply_text(
-        "🧠 *Formatting your idea with Groq... Please wait.*",
-        parse_mode="Markdown"
-    )
+    try:
+        loading_message = await send_reply(
+            update, context,
+            "🧠 *Formatting your idea with Groq... Please wait.*",
+            parse_mode="Markdown"
+        )
+    except Exception as e:
+        logger.error(f"Failed to send initial loading message: {e}")
+        await send_reply(update, context, f"❌ *Error:* `{str(e)}`", parse_mode="Markdown")
+        return
 
     try:
         # Call backend to generate plan draft content (automatically saved in backend)
@@ -84,8 +95,8 @@ async def plan_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
 
         response_text = (
             f"✨ *Project Plan Draft Created!* (ID: `{draft_id}`)\n"
-            f"📁 **Target Repository:** `{repo_name}`\n"
-            f"📂 **Saved locally to:** `{filename}`\n\n"
+            f"📁 *Target Repository:* `{repo_name}`\n"
+            f"📂 *Saved locally to:* `{filename}`\n\n"
             "✏️ *To edit manually:* Copy the markdown below, modify it, and send:\n"
             f"`/edit {draft_id} <modified_markdown>`\n\n"
             "```markdown\n"
@@ -93,14 +104,17 @@ async def plan_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
             "```"
         )
         
-        await loading_message.edit_text(response_text, reply_markup=reply_markup, parse_mode="Markdown")
+        await edit_reply(update, context, loading_message, response_text, reply_markup=reply_markup, parse_mode="Markdown")
         
     except Exception as e:
         logger.exception("Error while formatting plan:")
-        await loading_message.edit_text(
-            f"❌ *Failed to format plan.* \nError: `{str(e)}`",
-            parse_mode="Markdown"
-        )
+        if loading_message:
+            await edit_reply(update, context, loading_message, 
+                f"❌ *Failed to format plan.* \nError: `{str(e)}`",
+                parse_mode="Markdown"
+            )
+        else:
+            logger.error("Could not edit loading_message because it's None")
 
 
 @admin_only
@@ -112,11 +126,15 @@ async def edit_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
     if not await ensure_authenticated(update, context):
         return
 
+    if not update.effective_user or not update.effective_chat:
+        return
+
     chat_id = update.effective_chat.id
     user_id = update.effective_user.id
 
     if len(context.args) < 2:
-        await update.message.reply_text(
+        await send_reply(
+            update, context,
             "✏️ *Usage:*\n`/edit <draft_id> <modified_markdown>`\n\n"
             "Example:\n"
             "`/edit 2 # My New Title\n"
@@ -130,23 +148,23 @@ async def edit_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
     try:
         draft_id = int(draft_id_str)
     except ValueError:
-        await update.message.reply_text("❌ *Invalid Draft ID. Must be an integer.*", parse_mode="Markdown")
+        await send_reply(update, context, "❌ *Invalid Draft ID. Must be an integer.*", parse_mode="Markdown")
         return
 
     # Extract the markdown content from the full message text
     message_text = update.message.text
     first_space = message_text.find(" ")
     if first_space == -1:
-        await update.message.reply_text("❌ *Error parsing command.*", parse_mode="Markdown")
+        await send_reply(update, context, "❌ *Error parsing command.*", parse_mode="Markdown")
         return
     remainder = message_text[first_space:].strip()
     second_space = remainder.find(" ")
     if second_space == -1:
-        await update.message.reply_text("❌ *Please provide the new markdown content.*", parse_mode="Markdown")
+        await send_reply(update, context, "❌ *Please provide the new markdown content.*", parse_mode="Markdown")
         return
     new_content = remainder[second_space:].strip()
 
-    loading_message = await update.message.reply_text("💾 *Saving changes...*", parse_mode="Markdown")
+    loading_message = await send_reply(update, context, "💾 *Saving changes...*", parse_mode="Markdown")
 
     try:
         resp = await api_client.update_draft(user_id, chat_id, draft_id, new_content)
@@ -170,8 +188,8 @@ async def edit_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
 
         response_text = (
             f"✅ *Draft {draft_id} Updated Successfully!*\n"
-            f"📁 **Repository:** `{repo_name}`\n"
-            f"📂 **Saved locally to:** `{filename}`\n\n"
+            f"📁 *Repository:* `{repo_name}`\n"
+            f"📂 *Saved locally to:* `{filename}`\n\n"
             "✏️ *To edit manually:* Copy the markdown below, modify it, and send:\n"
             f"`/edit {draft_id} <modified_markdown>`\n\n"
             "```markdown\n"
@@ -188,11 +206,11 @@ async def edit_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
         ]
         reply_markup = InlineKeyboardMarkup(keyboard)
 
-        await loading_message.edit_text(response_text, reply_markup=reply_markup, parse_mode="Markdown")
+        await edit_reply(update, context, loading_message, response_text, reply_markup=reply_markup, parse_mode="Markdown")
 
     except Exception as e:
         logger.exception("Error updating draft:")
-        await loading_message.edit_text(f"❌ *Failed to update draft:* `{str(e)}`", parse_mode="Markdown")
+        await edit_reply(update, context, loading_message, f"❌ *Failed to update draft:* `{str(e)}`", parse_mode="Markdown")
 
 
 async def save_draft_callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -207,6 +225,9 @@ async def save_draft_callback_handler(update: Update, context: ContextTypes.DEFA
 
     if not await is_user_admin(update, context):
         await query.answer("⛔ Access Denied: Only administrators can save drafts.", show_alert=True)
+        return
+
+    if not update.effective_user or not update.effective_chat:
         return
 
     draft_id = int(data.split(":")[1])
@@ -281,13 +302,17 @@ async def plan_feedback_message_handler(update: Update, context: ContextTypes.DE
     # Reset wait state
     context.user_data["waiting_for_feedback"] = None
 
+    if not update.effective_user or not update.effective_chat:
+        return
+
     feedback_text = update.message.text
     chat_id = update.effective_chat.id
     user_id = update.effective_user.id
     
     raw_idea = context.user_data.get("raw_idea", "Refine the existing project plan.")
 
-    loading_message = await update.message.reply_text(
+    loading_message = await send_reply(
+        update, context,
         "🔄 *Refining the project plan with your feedback... Please wait.*",
         parse_mode="Markdown"
     )
@@ -338,8 +363,8 @@ async def plan_feedback_message_handler(update: Update, context: ContextTypes.DE
 
         response_text = (
             f"✨ *Project Plan Refined!* (ID: `{draft_id}`)\n"
-            f"📁 **Target Repository:** `{repo_name}`\n"
-            f"📂 **Saved locally to:** `{filename}`\n\n"
+            f"📁 *Target Repository:* `{repo_name}`\n"
+            f"📂 *Saved locally to:* `{filename}`\n\n"
             "✏️ *To edit manually:* Copy the markdown below, modify it, and send:\n"
             f"`/edit {draft_id} <modified_markdown>`\n\n"
             "```markdown\n"
@@ -347,11 +372,11 @@ async def plan_feedback_message_handler(update: Update, context: ContextTypes.DE
             "```"
         )
 
-        await loading_message.edit_text(response_text, reply_markup=reply_markup, parse_mode="Markdown")
+        await edit_reply(update, context, loading_message, response_text, reply_markup=reply_markup, parse_mode="Markdown")
 
     except Exception as e:
         logger.exception("Error refining plan:")
-        await loading_message.edit_text(
+        await edit_reply(update, context, loading_message,
             f"❌ *Failed to refine plan.* \nError: `{str(e)}`",
             parse_mode="Markdown"
         )

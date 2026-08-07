@@ -4,6 +4,7 @@ from telegram.ext import ContextTypes
 from bot import api_client
 from bot.commands.auth import ensure_authenticated
 from bot.auth import admin_only
+from bot.utils import send_reply, edit_reply
 
 logger = logging.getLogger(__name__)
 
@@ -17,6 +18,9 @@ async def create_task_command(update: Update, context: ContextTypes.DEFAULT_TYPE
     if not await ensure_authenticated(update, context):
         return
 
+    if not update.effective_user or not update.effective_chat:
+        return
+
     chat_id = update.effective_chat.id
     user_id = update.effective_user.id
     
@@ -24,7 +28,8 @@ async def create_task_command(update: Update, context: ContextTypes.DEFAULT_TYPE
     task_title_arg = " ".join(context.args) if context.args else ""
     
     if task_title_arg:
-        loading_message = await update.message.reply_text(
+        loading_message = await send_reply(
+            update, context,
             f"🔄 *Creating task:* `{task_title_arg}` on GitHub...",
             parse_mode="Markdown"
         )
@@ -34,25 +39,26 @@ async def create_task_command(update: Update, context: ContextTypes.DEFAULT_TYPE
             html_url = res.get("html_url")
             repo = res.get("repo")
             
-            await loading_message.edit_text(
+            await edit_reply(update, context, loading_message,
                 f"✅ *Task Created Successfully!*\n\n"
-                f"📌 **Task:** [#{issue_number}]({html_url}) - {task_title_arg}\n"
-                f"📁 **Repository:** `{repo}`\n"
-                f"📁 **Status:** `todo`\n\n"
+                f"📌 *Task:* [#{issue_number}]({html_url}) - {task_title_arg}\n"
+                f"📁 *Repository:* `{repo}`\n"
+                f"📁 *Status:* `todo`\n\n"
                 "Use `/board` to view active cards.",
                 parse_mode="Markdown",
                 disable_web_page_preview=True
             )
         except Exception as e:
             logger.exception("Error creating single task:")
-            await loading_message.edit_text(
+            await edit_reply(update, context, loading_message,
                 f"❌ *Failed to create task.* \nError: `{str(e)}`",
                 parse_mode="Markdown"
             )
         return
 
     # 2. Bulk creation from draft
-    loading_message = await update.message.reply_text(
+    loading_message = await send_reply(
+        update, context,
         "🔄 *Checking latest draft for checklist tasks...*",
         parse_mode="Markdown"
     )
@@ -65,13 +71,13 @@ async def create_task_command(update: Update, context: ContextTypes.DEFAULT_TYPE
         message = res.get("message")
 
         if message:
-            await loading_message.edit_text(f"⚠️ {message}", parse_mode="Markdown")
+            await edit_reply(update, context, loading_message, f"⚠️ {message}", parse_mode="Markdown")
             return
 
         # Construct the summary message
         summary_lines = [
             "📊 *Task Bulk Creation Summary*\n",
-            f"📁 **Repository:** `{repo}`\n"
+            f"📁 *Repository:* `{repo}`\n"
         ]
         
         if created:
@@ -88,7 +94,7 @@ async def create_task_command(update: Update, context: ContextTypes.DEFAULT_TYPE
                 
         summary_lines.append("\nUse `/board` to manage and claim your new tasks.")
         
-        await loading_message.edit_text(
+        await edit_reply(update, context, loading_message,
             "\n".join(summary_lines),
             parse_mode="Markdown",
             disable_web_page_preview=True
@@ -96,7 +102,7 @@ async def create_task_command(update: Update, context: ContextTypes.DEFAULT_TYPE
 
     except Exception as e:
         logger.exception("Error bulk creating tasks:")
-        await loading_message.edit_text(
+        await edit_reply(update, context, loading_message,
             f"❌ *Failed to parse tasks.* \nError: `{str(e)}`",
             parse_mode="Markdown"
         )
