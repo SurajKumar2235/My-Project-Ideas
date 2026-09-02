@@ -1,0 +1,453 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LogicalFire - Fueling Ideas into Structured Execution with AI</title>
+  <meta name="description" content="LogicalFire is an AI-powered project manager bot and Kanban system that converts raw Telegram chat ideas into structured technical specs, local markdown files, GitHub issues, and real-time task boards.">
+  <meta name="theme-color" content="#080b11">
+
+  <!-- Favicon -->
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🔥</text></svg>">
+
+  <!-- CSS Stylesheet -->
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+
+  <!-- Header Navigation -->
+  <header class="site-header" id="main-header">
+    <div class="container header-container">
+      <a href="/" class="brand-logo" id="brand-home-link">
+        <div class="flame-icon">🔥</div>
+        <span>LOGICAL<span class="text-gradient-flame">FIRE</span></span>
+      </a>
+
+      <nav aria-label="Main Navigation">
+        <ul class="nav-links">
+          <li><a href="#" class="nav-link active" data-target="view-home" id="nav-home">Home</a></li>
+          <li><a href="#features-section" class="nav-link" id="nav-features">Features</a></li>
+          <li><a href="#demo-section" class="nav-link" id="nav-demo">AI Plan Generator</a></li>
+          <li><a href="#kanban-section" class="nav-link" id="nav-kanban">Kanban Board</a></li>
+          <li><a href="/get" class="nav-link" data-target="view-get" id="nav-get">API Explorer (/get)</a></li>
+        </ul>
+      </nav>
+
+      <div class="header-actions">
+        <a href="/docs" target="_blank" class="btn btn-secondary btn-sm" id="btn-header-docs">
+          <span>📚 Swagger Docs</span>
+        </a>
+        <a href="/get" class="btn btn-primary btn-sm" data-target="view-get" id="btn-header-get-started">
+          <span>🔥 Get Started</span>
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <!-- MAIN CONTENT CONTAINER -->
+  <main id="main-content">
+
+    <!-- ===================================================================
+         VIEW 1: HOME PAGE VIEW
+         =================================================================== -->
+    <div id="view-home" class="page-view" style="display: block;">
+
+      <!-- HERO SECTION -->
+      <section class="hero-section" id="hero-section">
+        <div class="container">
+          <div class="badge badge-purple">
+            <span>✨ Powered by Groq LLM & Atomic SQLite Locks</span>
+          </div>
+
+          <h1 class="hero-title">
+            Turn Raw Ideas into<br>
+            <span class="text-gradient-flame">Structured Execution Fire</span>
+          </h1>
+
+          <p class="hero-subtitle">
+            <strong>LogicalFire</strong> captures raw, unstructured chat ideas, formats them into comprehensive technical implementation plans with AI, syncs with GitHub Issues, and orchestrates team progress on real-time Kanban boards.
+          </p>
+
+          <div class="hero-cta">
+            <a href="#demo-section" class="btn btn-primary" id="hero-try-demo-btn">
+              <span>🔥 Try AI Plan Generator</span>
+            </a>
+            <a href="/get" class="btn btn-outline-cyan" data-target="view-get" id="hero-explore-get-btn">
+              <span>⚡ Explore GET API & Setup (/get)</span>
+            </a>
+            <a href="https://github.com" target="_blank" class="btn btn-secondary" id="hero-github-btn">
+              <span>🐙 GitHub Sync</span>
+            </a>
+          </div>
+
+          <!-- Hero Visual Showcase -->
+          <div class="hero-preview-container">
+            <div class="hero-preview-card">
+              <div class="preview-topbar">
+                <div class="window-dots">
+                  <div class="dot dot-red"></div>
+                  <div class="dot dot-yellow"></div>
+                  <div class="dot dot-green"></div>
+                </div>
+                <div class="window-title">logicalfire-bot // live-terminal-workflow</div>
+                <div class="badge badge-cyan" style="margin:0; font-size:0.75rem;">Status: Active</div>
+              </div>
+
+              <div class="preview-content-grid">
+                <!-- Left Terminal Mockup -->
+                <div style="font-family:var(--font-mono); font-size:0.85rem; color:#cbd5e1; background:rgba(6, 8, 13, 0.9); padding:1.25rem; border-radius:var(--radius-md); border:1px solid var(--border-color);">
+                  <div style="color:var(--flame-secondary); font-weight:600; margin-bottom:0.5rem;">$ telegram_bot > /plan "Add atomic locks for task cards"</div>
+                  <div style="color:var(--cyan-accent); margin-bottom:0.5rem;">🤖 Groq Llama-3.3-70b structuring technical spec...</div>
+                  <div style="color:var(--green-accent);">✓ Created local plan: plan_atomic_locks.md</div>
+                  <div style="color:var(--text-muted); margin-top:0.75rem;">[+] Issue #42 pushed to GitHub repository</div>
+                  <div style="color:var(--text-muted);">[+] Kanban Card added to /board column [TO DO]</div>
+                </div>
+
+                <!-- Right Card Preview -->
+                <div style="display:flex; flex-direction:column; gap:0.75rem; justify-content:center;">
+                  <div class="glass-card" style="padding:1rem; border-color:rgba(255, 69, 0, 0.3);">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.4rem;">
+                      <span class="card-tag tag-api">LOCKING SERVICE</span>
+                      <span style="color:var(--cyan-accent); font-size:0.8rem; font-weight:600;">🔒 CLAIMED</span>
+                    </div>
+                    <div style="font-weight:600; font-size:0.95rem; margin-bottom:0.25rem;">Atomic Card Locking Logic in SQLite</div>
+                    <div style="font-size:0.8rem; color:var(--text-muted);">Locked by @surajkumar • Expires in 23h 40m</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- FEATURES SECTION -->
+      <section class="section" id="features-section">
+        <div class="container">
+          <div class="section-header">
+            <h2 class="section-title">Engineered for Rapid Product Development</h2>
+            <p class="section-desc">Stop letting great ideas get lost in Telegram & Discord chat history. LogicalFire bridges discussion with action.</p>
+          </div>
+
+          <div class="features-grid">
+            <article class="glass-card feature-card" id="feature-ai-structuring">
+              <div class="feature-icon">🧠</div>
+              <h3 class="feature-title">AI Technical Spec Generation</h3>
+              <p class="feature-body">
+                Leverages Groq API (\`llama-3.3-70b-versatile\`) and Gemini to convert rough chat notes into structured technical blueprints with step-by-step task breakdowns.
+              </p>
+            </article>
+
+            <article class="glass-card feature-card" id="feature-atomic-locks">
+              <div class="feature-icon">🔒</div>
+              <h3 class="feature-title">Atomic Task Claiming & Locks</h3>
+              <p class="feature-body">
+                SQLite/PostgreSQL backed card locks ensure team members never overwrite or duplicate effort. Cards auto-expire after custom timeout limits.
+              </p>
+            </article>
+
+            <article class="glass-card feature-card" id="feature-github-sync">
+              <div class="feature-icon">🐙</div>
+              <h3 class="feature-title">Seamless GitHub Issue Sync</h3>
+              <p class="feature-body">
+                Push formatted project plans directly to your GitHub repository with labels, assignees, and issue cross-references with a single command.
+              </p>
+            </article>
+
+            <article class="glass-card feature-card" id="feature-telegram-bot">
+              <div class="feature-icon">💬</div>
+              <h3 class="feature-title">Telegram Command Center</h3>
+              <p class="feature-body">
+                Interactive Telegram bot with inline keyboard buttons, real-time board rendering, and instant project plan drafting right inside group chats.
+              </p>
+            </article>
+
+            <article class="glass-card feature-card" id="feature-rest-api">
+              <div class="feature-icon">⚡</div>
+              <h3 class="feature-title">FastAPI REST Server</h3>
+              <p class="feature-body">
+                Complete REST API with GitHub OAuth integration, JWT tokens, endpoints for drafts, tasks, push operations, and live Kanban data.
+              </p>
+            </article>
+
+            <article class="glass-card feature-card" id="feature-local-persistence">
+              <div class="feature-icon">📁</div>
+              <h3 class="feature-title">Local Markdown Workspace</h3>
+              <p class="feature-body">
+                Saves every generated plan locally as a structured \`.md\` file in your repository workspace, ensuring offline access and version control.
+              </p>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <!-- INTERACTIVE AI PLAN GENERATOR DEMO -->
+      <section class="section" id="demo-section">
+        <div class="container">
+          <div class="section-header">
+            <span class="badge badge-cyan">Interactive Playground</span>
+            <h2 class="section-title">Try the AI Plan Generator</h2>
+            <p class="section-desc">Type your unstructured idea below or choose a preset to see how LogicalFire turns raw thoughts into production-ready specifications.</p>
+          </div>
+
+          <div class="demo-box" id="ai-generator-demo-box">
+            <div class="demo-input-group">
+              <div class="demo-label">
+                <span>Enter Raw Project Idea or Feature Description:</span>
+                <div class="presets-container">
+                  <span class="preset-chip" data-preset="auth">Auth Microservice</span>
+                  <span class="preset-chip" data-preset="kanban">Kanban Board</span>
+                  <span class="preset-chip" data-preset="bot">Telegram Bot</span>
+                </div>
+              </div>
+              <textarea id="demo-idea-input" class="demo-textarea" placeholder="e.g., Build a real-time notification engine using FastAPI, Redis pub/sub, and WebSockets for live status updates..."></textarea>
+            </div>
+
+            <div style="display:flex; justify-content:flex-end; margin-bottom:1.5rem;">
+              <button id="generate-plan-btn" class="btn btn-primary">
+                <span>🔥 Generate Implementation Plan</span>
+              </button>
+            </div>
+
+            <!-- Output Display Container -->
+            <div id="plan-output-container" class="demo-output-card">
+              <div style="display:flex; flex-direction:column; align-items:center; justify-content:center; height:200px; color:var(--text-dim);">
+                <span style="font-size:2.5rem; margin-bottom:0.5rem;">✨</span>
+                <p>Click "Generate Implementation Plan" above to trigger AI technical structuring.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- INTERACTIVE KANBAN BOARD SECTION -->
+      <section class="section" id="kanban-section">
+        <div class="container">
+          <div class="section-header">
+            <span class="badge badge-purple">Real-Time Coordination</span>
+            <h2 class="section-title">Interactive Kanban Task Board</h2>
+            <p class="section-desc">Simulate claiming and releasing tasks in real-time. LogicalFire's atomic locking prevents card collision across teams.</p>
+          </div>
+
+          <div class="kanban-board-grid" id="kanban-board-grid">
+            <!-- Column 1: To Do -->
+            <div class="kanban-column" id="col-todo">
+              <div class="column-header">
+                <span>📌 TO DO</span>
+                <span class="card-count" id="count-todo">0</span>
+              </div>
+              <div class="task-cards-list" id="kanban-todo-list"></div>
+            </div>
+
+            <!-- Column 2: In Progress -->
+            <div class="kanban-column" id="col-progress">
+              <div class="column-header" style="color:var(--cyan-accent);">
+                <span>⚡ IN PROGRESS</span>
+                <span class="card-count" id="count-progress">0</span>
+              </div>
+              <div class="task-cards-list" id="kanban-progress-list"></div>
+            </div>
+
+            <!-- Column 3: Done -->
+            <div class="kanban-column" id="col-done">
+              <div class="column-header" style="color:var(--green-accent);">
+                <span>✅ COMPLETED</span>
+                <span class="card-count" id="count-done">0</span>
+              </div>
+              <div class="task-cards-list" id="kanban-done-list"></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+    </div><!-- END VIEW 1 -->
+
+
+    <!-- ===================================================================
+         VIEW 2: GET PAGE & API EXPLORER VIEW (/get)
+         =================================================================== -->
+    <div id="view-get" class="page-view" style="display: none;">
+
+      <section class="hero-section" style="padding-bottom: 2rem;">
+        <div class="container">
+          <div class="badge badge-cyan">
+            <span>⚡ Interactive Route Tester & Quickstart</span>
+          </div>
+
+          <h1 class="hero-title">
+            LogicalFire <span class="text-gradient-cyan">GET Page & API Explorer</span>
+          </h1>
+
+          <p class="hero-subtitle">
+            Inspect live JSON endpoints, review Telegram command reference, and get started deploying LogicalFire with Python, Docker, or Fly.io.
+          </p>
+        </div>
+      </section>
+
+      <!-- LIVE GET API TESTER -->
+      <section class="section" style="padding-top: 1rem;">
+        <div class="container">
+          <div class="section-header">
+            <h2 class="section-title">Live GET API Tester</h2>
+            <p class="section-desc">Click any GET route button to issue a live HTTP request to the LogicalFire REST backend.</p>
+          </div>
+
+          <div class="get-tester-container" id="get-api-tester-container">
+            <div class="endpoint-selector-list">
+              <button class="endpoint-btn active" data-endpoint="health" id="btn-get-health">
+                <span class="http-method-get">GET</span>
+                <span>/health</span>
+              </button>
+              <button class="endpoint-btn" data-endpoint="board" id="btn-get-board">
+                <span class="http-method-get">GET</span>
+                <span>/api/board</span>
+              </button>
+              <button class="endpoint-btn" data-endpoint="drafts" id="btn-get-drafts">
+                <span class="http-method-get">GET</span>
+                <span>/api/drafts</span>
+              </button>
+              <button class="endpoint-btn" data-endpoint="me" id="btn-get-me">
+                <span class="http-method-get">GET</span>
+                <span>/auth/me</span>
+              </button>
+              <button class="endpoint-btn" data-endpoint="openapi" id="btn-get-openapi">
+                <span class="http-method-get">GET</span>
+                <span>/openapi.json</span>
+              </button>
+            </div>
+
+            <!-- Request Bar -->
+            <div class="api-request-bar">
+              <span class="http-method-get">GET</span>
+              <span id="current-request-url" class="request-url">http://localhost:8000/health</span>
+              <button id="execute-get-btn" class="btn btn-sm btn-primary">
+                <span>▶ Send Request</span>
+              </button>
+            </div>
+
+            <!-- Response Viewer -->
+            <pre class="json-response-viewer" id="json-response-output">// Click "Send Request" above to execute API call...</pre>
+          </div>
+        </div>
+      </section>
+
+      <!-- TELEGRAM COMMAND REFERENCE & SETUP -->
+      <section class="section">
+        <div class="container">
+          <div class="section-header">
+            <h2 class="section-title">Telegram Bot Commands & Setup</h2>
+            <p class="section-desc">Commands available directly in Telegram chat to manage projects and Kanban cards.</p>
+          </div>
+
+          <div class="commands-grid">
+            <div class="command-card" id="cmd-plan">
+              <div class="command-name">/plan &lt;idea description&gt;</div>
+              <div class="command-desc">Invokes Groq LLM to format raw text into a detailed technical plan and saves it locally as a markdown file.</div>
+            </div>
+
+            <div class="command-card" id="cmd-board">
+              <div class="command-name">/board</div>
+              <div class="command-desc">Displays the interactive Kanban board with inline Claim, Release, and Done action buttons.</div>
+            </div>
+
+            <div class="command-card" id="cmd-create-task">
+              <div class="command-name">/create-task &lt;title&gt;</div>
+              <div class="command-desc">Manually creates a new task or parses bulk bullet points into individual GitHub issues.</div>
+            </div>
+
+            <div class="command-card" id="cmd-push">
+              <div class="command-name">/push &lt;draft_id&gt;</div>
+              <div class="command-desc">Pushes a saved local draft plan directly to your GitHub repository as a new Issue.</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- INSTALLATION & DEPLOYMENT -->
+      <section class="section">
+        <div class="container">
+          <div class="section-header">
+            <h2 class="section-title">Deployment & Environment Setup</h2>
+            <p class="section-desc">Run LogicalFire locally or deploy to cloud hosting providers in minutes.</p>
+          </div>
+
+          <div class="features-grid">
+            <div class="glass-card">
+              <h3 class="feature-title">1. Local Setup with uv / Python</h3>
+              <pre style="font-family:var(--font-mono); font-size:0.85rem; color:var(--cyan-accent); background:rgba(0,0,0,0.4); padding:1rem; border-radius:var(--radius-sm); margin-top:0.75rem; overflow-x:auto;">
+git clone https://github.com/LogicalFire/project-manager.git
+cd project_manager_bot
+uv sync
+uv run python -m api.main</pre>
+            </div>
+
+            <div class="glass-card">
+              <h3 class="feature-title">2. Docker Deployment</h3>
+              <pre style="font-family:var(--font-mono); font-size:0.85rem; color:var(--flame-secondary); background:rgba(0,0,0,0.4); padding:1rem; border-radius:var(--radius-sm); margin-top:0.75rem; overflow-x:auto;">
+docker build -t logicalfire:latest .
+docker run -d -p 8000:8000 \
+  --env-file .env \
+  logicalfire:latest</pre>
+            </div>
+          </div>
+        </div>
+      </section>
+
+    </div><!-- END VIEW 2 -->
+
+  </main>
+
+  <!-- SITE FOOTER -->
+  <footer class="site-footer" id="main-footer">
+    <div class="container">
+      <div class="footer-grid">
+        <div class="footer-brand">
+          <a href="/" class="brand-logo">
+            <div class="flame-icon">🔥</div>
+            <span>LOGICAL<span class="text-gradient-flame">FIRE</span></span>
+          </a>
+          <p>The AI-Powered Project Manager Bot & Kanban System. Fueling unstructured ideas into structured technical execution.</p>
+        </div>
+
+        <div>
+          <h4 class="footer-title">Navigation</h4>
+          <ul class="footer-links">
+            <li><a href="/" data-target="view-home">Home</a></li>
+            <li><a href="#features-section">Features</a></li>
+            <li><a href="#demo-section">AI Generator</a></li>
+            <li><a href="#kanban-section">Kanban Board</a></li>
+            <li><a href="/get" data-target="view-get">GET Explorer (/get)</a></li>
+          </ul>
+        </div>
+
+        <div>
+          <h4 class="footer-title">REST API</h4>
+          <ul class="footer-links">
+            <li><a href="/docs" target="_blank">Swagger Documentation</a></li>
+            <li><a href="/openapi.json" target="_blank">OpenAPI Spec</a></li>
+            <li><a href="/health" target="_blank">Health Check</a></li>
+            <li><a href="/api/board" target="_blank">Kanban Board API</a></li>
+          </ul>
+        </div>
+
+        <div>
+          <h4 class="footer-title">Integrations</h4>
+          <ul class="footer-links">
+            <li><a href="https://groq.com" target="_blank">Groq AI Engine</a></li>
+            <li><a href="https://github.com" target="_blank">GitHub REST API</a></li>
+            <li><a href="https://telegram.org" target="_blank">Telegram Bot API</a></li>
+            <li><a href="https://neon.tech" target="_blank">Neon Postgres</a></li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="footer-bottom">
+        <p>&copy; 2026 LogicalFire. All rights reserved.</p>
+        <p>Built with ❤️ using FastAPI, Groq LLM & Modern CSS</p>
+      </div>
+    </div>
+  </footer>
+
+  <!-- Client Script -->
+  <script src="/static/script.js"></script>
+</body>
+</html>

@@ -1,6 +1,11 @@
 import os
 import httpx
-from dotenv import load_dotenv
+
+try:
+    from dotenv import load_dotenv
+except ImportError:  # pragma: no cover - fallback for deployment images without python-dotenv
+    def load_dotenv() -> bool:
+        return False
 
 # Load env variables
 load_dotenv()
@@ -10,7 +15,7 @@ GROQ_MODEL_REASONING = os.environ.get("GROQ_MODEL_REASONING", "llama-3.3-70b-ver
 GROQ_MODEL_SMALL = os.environ.get("GROQ_MODEL_SMALL", "llama-3.1-8b-instant")
 GROQ_API_URL = "https://api.groq.com/openai/v1/chat/completions"
 
-async def format_idea_to_markdown(raw_idea: str, use_reasoning: bool = True) -> str:
+async def format_idea_to_markdown(raw_idea: str, use_reasoning: bool = True, previous_markdown: str = None, feedback: str = None) -> str:
     """
     Sends the raw idea to Groq and requests a structured project plan in markdown.
     """
@@ -44,12 +49,17 @@ async def format_idea_to_markdown(raw_idea: str, use_reasoning: bool = True) -> 
         "Content-Type": "application/json"
     }
 
+    messages = [{"role": "system", "content": system_prompt}]
+    if previous_markdown and feedback:
+        messages.append({"role": "user", "content": f"Here is the raw idea:\n{raw_idea}"})
+        messages.append({"role": "assistant", "content": previous_markdown})
+        messages.append({"role": "user", "content": f"Please update the project plan based on this feedback:\n{feedback}"})
+    else:
+        messages.append({"role": "user", "content": f"Here is the raw idea:\n{raw_idea}"})
+
     payload = {
         "model": model,
-        "messages": [
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": f"Here is the raw idea:\n{raw_idea}"}
-        ],
+        "messages": messages,
         "temperature": 0.2
     }
 

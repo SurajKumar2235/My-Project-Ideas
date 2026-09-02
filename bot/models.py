@@ -16,3 +16,21 @@ class Lock(BaseModel):
     locked_by_username: Optional[str] = None
     locked_at: Optional[datetime] = None
     status: str = Field(default="todo")  # todo | doing | done
+
+class User(BaseModel):
+    id: Optional[int] = None
+    github_id: Optional[int] = None
+    username: str
+    email: Optional[str] = None
+    avatar_url: Optional[str] = None
+    access_token: Optional[str] = None
+    role: str = Field(default="user")  # dev | user | admin | owner
+    created_at: Optional[datetime] = None
+    
+class UsersChannel(BaseModel):
+    chat_id: int
+    user_id: int
+    telegram_username: Optional[str] = None
+    telegram_channel_id: Optional[str] = None
+     
+

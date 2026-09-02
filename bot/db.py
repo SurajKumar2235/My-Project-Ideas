@@ -4,10 +4,13 @@ import os
 import contextlib
 from datetime import datetime, timezone
 from typing import Optional, List
-from bot.models import Draft, Lock
+from bot.models import Draft, Lock, User
 
-DATABASE_URL = os.environ.get("DATABASE_URL", "postgresql://postgres:postgres@localhost:5432/bot")
+from dotenv import load_dotenv
+load_dotenv()
 
+DATABASE_URL = os.environ.get("DATABASE_URL" )
+# print(f"Using DATABASE_URL: {DATABASE_URL}")  # Debugging line to check the database URL
 def get_connection():
     return psycopg2.connect(DATABASE_URL)
 
@@ -50,6 +53,129 @@ def init_db():
                 status TEXT DEFAULT 'todo'
             )
         """)
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS users (
+                id SERIAL PRIMARY KEY,
+                github_id BIGINT UNIQUE,
+                username VARCHAR(255) NOT NULL,
+                email VARCHAR(255),
+                avatar_url TEXT,
+                access_token TEXT,
+                created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+
+def get_user_by_id(user_id: int) -> Optional[User]:
+    with db_session() as cur:
+        cur.execute(
+            "SELECT id, github_id, username, email, avatar_url, access_token, created_at FROM users WHERE id = %s",
+            (user_id,)
+        )
+        row = cur.fetchone()
+        if not row:
+            return None
+        return User(
+            id=row["id"],
+            github_id=row["github_id"],
+            username=row["username"],
+            email=row["email"],
+            avatar_url=row["avatar_url"],
+            access_token=row["access_token"],
+            created_at=row["created_at"]
+        )
+
+def get_user_by_github_id(github_id: int) -> Optional[User]:
+    with db_session() as cur:
+        cur.execute(
+            "SELECT id, github_id, username, email, avatar_url, access_token, created_at FROM users WHERE github_id = %s",
+            (github_id,)
+        )
+        row = cur.fetchone()
+        if not row:
+            return None
+        return User(
+            id=row["id"],
+            github_id=row["github_id"],
+            username=row["username"],
+            email=row["email"],
+            avatar_url=row["avatar_url"],
+            access_token=row["access_token"],
+            created_at=row["created_at"]
+        )
+
+def get_user_by_username(username: str) -> Optional[User]:
+    with db_session() as cur:
+        cur.execute(
+            "SELECT id, github_id, username, email, avatar_url, access_token, created_at FROM users WHERE username = %s",
+            (username,)
+        )
+        row = cur.fetchone()
+        if not row:
+            return None
+        return User(
+            id=row["id"],
+            github_id=row["github_id"],
+            username=row["username"],
+            email=row["email"],
+            avatar_url=row["avatar_url"],
+            access_token=row["access_token"],
+            created_at=row["created_at"]
+        )
+
+def create_or_update_github_user(
+    github_id: int,
+    username: str,
+    email: Optional[str] = None,
+    avatar_url: Optional[str] = None,
+    access_token: Optional[str] = None
+) -> User:
+    with db_session() as cur:
+        cur.execute(
+            """
+            INSERT INTO users (github_id, username, email, avatar_url, access_token, created_at)
+            VALUES (%s, %s, %s, %s, %s, %s)
+            ON CONFLICT (github_id)
+            DO UPDATE SET
+                username = EXCLUDED.username,
+                email = EXCLUDED.email,
+                avatar_url = EXCLUDED.avatar_url,
+                access_token = EXCLUDED.access_token
+            RETURNING id, github_id, username, email, avatar_url, access_token, created_at
+            """,
+            (github_id, username, email, avatar_url, access_token, datetime.now(timezone.utc))
+        )
+        row = cur.fetchone()
+        return User(
+            id=row["id"],
+            github_id=row["github_id"],
+            username=row["username"],
+            email=row["email"],
+            avatar_url=row["avatar_url"],
+            access_token=row["access_token"],
+            created_at=row["created_at"]
+        )
+
+def create_user(username: str, email: Optional[str] = None, avatar_url: Optional[str] = None) -> User:
+    with db_session() as cur:
+        cur.execute(
+            """
+            INSERT INTO users (username, email, avatar_url, created_at)
+            VALUES (%s, %s, %s, %s)
+            RETURNING id, github_id, username, email, avatar_url, access_token, created_at
+            """,
+            (username, email, avatar_url, datetime.now(timezone.utc))
+        )
+        row = cur.fetchone()
+        return User(
+            id=row["id"],
+            github_id=row["github_id"],
+            username=row["username"],
+            email=row["email"],
+            avatar_url=row["avatar_url"],
+            access_token=row["access_token"],
+            created_at=row["created_at"]
+        )
+
 
 def save_draft(chat_id: int, user_id: int, content: str) -> Draft:
     with db_session() as cur:

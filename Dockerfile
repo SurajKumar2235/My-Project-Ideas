@@ -1,25 +1,23 @@
-# Use a builder stage with uv
-FROM ghcr.io/astral-sh/uv:python3.13-bookworm-slim AS builder
-ENV UV_COMPILE_BYTECODE=1 UV_LINK_MODE=copy
-WORKDIR /app
+# Use the official uv bookworm image which has both python and uv preinstalled
+FROM ghcr.io/astral-sh/uv:python3.13-bookworm-slim
 
-# Copy configuration files and sync dependencies
+WORKDIR /app
+ENV UV_COMPILE_BYTECODE=1
+
+# Copy lock files and sync dependencies
 COPY pyproject.toml uv.lock ./
 RUN uv sync --frozen --no-install-project --no-dev
 
-# Copy the rest of the application files and sync project
+# Copy project files and build
 COPY . .
 RUN uv sync --frozen --no-dev
 
-# Final runtime image
-FROM docker.io/library/python:3.13-slim
-WORKDIR /app
-COPY --from=builder /app /app
-ENV PATH="/app/.venv/bin:$PATH"
-
-# Create data directory for persistent project plan storage
+# Create data directory for local project plan storage if needed
 RUN mkdir -p /data
 ENV PLANS_DIR="/data"
 
-# Start the application
-CMD ["python", "main.py"]
+# Expose default port for web
+EXPOSE 8000
+
+# Defaults to running the web server using uv run
+CMD ["uv", "run", "uvicorn", "api.main:app", "--host", "0.0.0.0", "--port", "8000"]

@@ -1,7 +1,13 @@
 import os
 import logging
 from datetime import datetime, timedelta, timezone
-from dotenv import load_dotenv
+
+try:
+    from dotenv import load_dotenv
+except ImportError:  # pragma: no cover - fallback for deployment images without python-dotenv
+    def load_dotenv() -> bool:
+        return False
+
 from bot import db, github_client
 
 load_dotenv()
