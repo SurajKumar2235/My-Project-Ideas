@@ -14,6 +14,10 @@ jobs:
   build-and-push:
     name: Build & Push Docker Image to Amazon ECR
     runs-on: ubuntu-latest
+    env:
+      ECS_CLUSTER: ${{ secrets.ECS_CLUSTER }}
+      ECS_WEB_SERVICE: ${{ secrets.ECS_WEB_SERVICE }}
+      ECS_BOT_SERVICE: ${{ secrets.ECS_BOT_SERVICE }}
 
     steps:
       - name: Checkout repository
@@ -51,23 +55,23 @@ jobs:
           echo "  - $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG"
           echo "  - $ECR_REGISTRY/$ECR_REPOSITORY:latest"
 
-      # Optional: Trigger Amazon ECS Service Deployment if ECS secrets are configured
+      # Optional: Trigger Amazon ECS Service Deployment if ECS env variables are populated
       - name: Deploy to Amazon ECS Web Service
-        if: ${{ secrets.ECS_CLUSTER != '' && secrets.ECS_WEB_SERVICE != '' }}
+        if: env.ECS_CLUSTER != '' && env.ECS_WEB_SERVICE != ''
         run: |
-          echo "Updating Amazon ECS Web Service: ${{ secrets.ECS_WEB_SERVICE }} in cluster ${{ secrets.ECS_CLUSTER }}..."
+          echo "Updating Amazon ECS Web Service: $ECS_WEB_SERVICE in cluster $ECS_CLUSTER..."
           aws ecs update-service \
-            --cluster ${{ secrets.ECS_CLUSTER }} \
-            --service ${{ secrets.ECS_WEB_SERVICE }} \
+            --cluster "$ECS_CLUSTER" \
+            --service "$ECS_WEB_SERVICE" \
             --force-new-deployment \
             --region ${{ env.AWS_REGION }}
 
       - name: Deploy to Amazon ECS Bot Service
-        if: ${{ secrets.ECS_CLUSTER != '' && secrets.ECS_BOT_SERVICE != '' }}
+        if: env.ECS_CLUSTER != '' && env.ECS_BOT_SERVICE != ''
         run: |
-          echo "Updating Amazon ECS Bot Service: ${{ secrets.ECS_BOT_SERVICE }} in cluster ${{ secrets.ECS_CLUSTER }}..."
+          echo "Updating Amazon ECS Bot Service: $ECS_BOT_SERVICE in cluster $ECS_CLUSTER..."
           aws ecs update-service \
-            --cluster ${{ secrets.ECS_CLUSTER }} \
-            --service ${{ secrets.ECS_BOT_SERVICE }} \
+            --cluster "$ECS_CLUSTER" \
+            --service "$ECS_BOT_SERVICE" \
             --force-new-deployment \
             --region ${{ env.AWS_REGION }}
