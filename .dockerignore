@@ -1,6 +1,29 @@
+# Virtual Environment & Python Caches
 .venv
 __pycache__
-*.pyc
+*.py[cod]
+*$py.class
+.pytest_cache
+
+# Critical Security: Secrets & Environment Files
+.env
+.env.*
+!.env.example
+
+# Local SQLite Database Files
+*.db
+*.db-*
+*.sqlite
+*.sqlite3
+bot.db*
+
+# Version Control & CI/CD
 .git
+.gitignore
 .github
+
+# Logs & Temporary Files
 *.log
+test2
+.antigravityignore
+

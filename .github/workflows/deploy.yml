@@ -1,22 +1,73 @@
-name: Deploy to Fly.io
+name: Build & Deploy to AWS ECR
 
 on:
   push:
     branches:
-      - main
+      - feature_test
+  workflow_dispatch:
+
+env:
+  AWS_REGION: ${{ secrets.AWS_REGION || 'ap-southeast-1' }}
+  ECR_REPOSITORY: ${{ secrets.ECR_REPOSITORY || 'project-manager-bot' }}
 
 jobs:
-  deploy:
-    name: Deploy Application
+  build-and-push:
+    name: Build & Push Docker Image to Amazon ECR
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Setup Flyctl CLI
-        uses: superfly/flyctl-actions/setup-flyctl@master
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
 
-      - name: Deploy to Fly.io
-        run: flyctl deploy --remote-only
+      - name: Log in to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build, tag, and push image to Amazon ECR
         env:
-          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          echo "Building Docker image for linux/amd64..."
+          docker build --platform linux/amd64 \
+            -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG \
+            -t $ECR_REGISTRY/$ECR_REPOSITORY:latest .
+
+          echo "Pushing image to ECR..."
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest
+
+          echo "Pushed successfully:"
+          echo "  - $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG"
+          echo "  - $ECR_REGISTRY/$ECR_REPOSITORY:latest"
+
+      # Optional: Trigger Amazon ECS Service Deployment if ECS secrets are configured
+      - name: Deploy to Amazon ECS Web Service
+        if: ${{ secrets.ECS_CLUSTER != '' && secrets.ECS_WEB_SERVICE != '' }}
+        run: |
+          echo "Updating Amazon ECS Web Service: ${{ secrets.ECS_WEB_SERVICE }} in cluster ${{ secrets.ECS_CLUSTER }}..."
+          aws ecs update-service \
+            --cluster ${{ secrets.ECS_CLUSTER }} \
+            --service ${{ secrets.ECS_WEB_SERVICE }} \
+            --force-new-deployment \
+            --region ${{ env.AWS_REGION }}
+
+      - name: Deploy to Amazon ECS Bot Service
+        if: ${{ secrets.ECS_CLUSTER != '' && secrets.ECS_BOT_SERVICE != '' }}
+        run: |
+          echo "Updating Amazon ECS Bot Service: ${{ secrets.ECS_BOT_SERVICE }} in cluster ${{ secrets.ECS_CLUSTER }}..."
+          aws ecs update-service \
+            --cluster ${{ secrets.ECS_CLUSTER }} \
+            --service ${{ secrets.ECS_BOT_SERVICE }} \
+            --force-new-deployment \
+            --region ${{ env.AWS_REGION }}
