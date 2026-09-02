@@ -124,10 +124,10 @@ async def create_tasks(
                 "title": task_title
             })
         except Exception as e:
-            logger.error(f"Failed to create task '{task_title}': {e}")
+            logger.exception(f"Failed to create task '{task_title}'")
             failed_tasks.append({
                 "title": task_title,
-                "error": str(e)
+                "error": "Failed to create task issue."
             })
 
     return {
