@@ -3,7 +3,8 @@ from typing import Optional, List, Dict, Any
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
 
-from bot import db, github_client, locking
+from bot import db, locking
+from client import github_client
 from bot.models import User
 from api.auth import get_current_user
 

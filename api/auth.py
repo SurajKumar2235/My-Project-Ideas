@@ -115,7 +115,7 @@ async def github_oauth_login(redirect_uri: Optional[str] = None, state: Optional
 
     callback_uri = redirect_uri or GITHUB_REDIRECT_URI
     scope = "read:user user:email repo"
-    
+    print(f"GitHub OAuth Login initiated. Redirect URI: {callback_uri}, State: {state}")
     github_auth_url = (
         f"https://github.com/login/oauth/authorize?"
         f"client_id={GITHUB_CLIENT_ID}"
@@ -125,7 +125,7 @@ async def github_oauth_login(redirect_uri: Optional[str] = None, state: Optional
         github_auth_url += f"&redirect_uri={callback_uri}"
     if state:
         github_auth_url += f"&state={state}"
-
+    print(f"Redirecting to GitHub OAuth URL: {github_auth_url}")
     return RedirectResponse(url=github_auth_url)
 
 
@@ -224,6 +224,12 @@ async def github_oauth_callback(code: str, state: Optional[str] = None):
                     telegram_id = int(parts[1])
                     chat_id = int(parts[2])
                     
+                    # Ensure no other user record holds this telegram_id
+                    existing_tg_user = await User.get_or_none(telegram_id=telegram_id)
+                    if existing_tg_user and existing_tg_user.id != user.id:
+                        existing_tg_user.telegram_id = None
+                        await existing_tg_user.save()
+
                     # Update user with Telegram ID
                     user.telegram_id = telegram_id
                     await user.save()

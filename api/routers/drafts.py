@@ -5,7 +5,8 @@ from typing import Optional, List
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
 
-from bot import db, groq_client
+from bot import db
+from client import groq_client
 from bot.models import Draft, User
 from api.auth import get_current_user
 
@@ -40,7 +41,7 @@ async def plan_idea(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Idea description cannot be empty."
         )
-
+    print(f"Received idea for formatting: {body.idea}")
     try:
         formatted_markdown = await groq_client.format_idea_to_markdown(body.idea, use_reasoning=True)
         

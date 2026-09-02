@@ -115,11 +115,11 @@ Common migration workflow:
 1. Update `core/models.py` with the new field or model change.
 2. Create a new migration from the repository root:
    ```bash
-   python -m aerich migrate --name add_my_field
+   uv run -m aerich migrate --name add_my_field
    ```
 3. Apply the migration to the database:
    ```bash
-   python -m aerich upgrade
+   uv run -m aerich upgrade
    ```
 
 If you are initializing a new database for the first time, run:

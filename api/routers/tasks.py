@@ -4,7 +4,8 @@ from typing import Optional, List
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
 
-from bot import db, github_client
+from bot import db
+from client import github_client
 from bot.models import User
 from api.auth import get_current_user
 
