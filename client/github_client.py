@@ -70,7 +70,27 @@ async def list_github_issues() -> list[dict]:
             return []
         response.raise_for_status()
         return response.json()
+async def get_repo_collaborators() -> list[str]:
+    """
+    Fetches the list of collaborators for the GitHub repository.
+    Returns a list of GitHub usernames.
+    """
+    if not GITHUB_PROJECT:
+        return []
 
+    url = f"https://api.github.com/repos/{GITHUB_OWNER}/{GITHUB_PROJECT}/collaborators"
+    
+    async with httpx.AsyncClient(timeout=10.0) as client:
+        response = await client.get(url, headers=get_headers())
+        if response.status_code == 404:
+            logger.warning("Repository not found or token lacks permissions.")
+            return []
+        response.raise_for_status()
+        collaborators_data = response.json()
+        return [collab["login"] for collab in collaborators_data]
+
+
+    
 async def assign_and_relabel_issue(issue_number: int, github_username: str | None, status_label: str) -> dict:
     """
     Updates the status label and assigns the issue to the given GitHub username.
