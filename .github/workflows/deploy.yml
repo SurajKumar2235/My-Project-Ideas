@@ -1,0 +1,31 @@
+
+name: Deploy to Render
+
+on:
+  push:
+    branches:
+      - feature_test
+  workflow_dispatch:
+
+# env:
+#   AWS_REGION: ${{ secrets.AWS_REGION || 'ap-southeast-1' }}
+#   ECR_REPOSITORY: ${{ secrets.ECR_REPOSITORY || 'project-manager-bot' }}
+
+jobs:
+  deploy:
+    name: Deploy application to Render
+    runs-on: ubuntu-latest
+    env:
+      ECS_CLUSTER: ${{ secrets.ECS_CLUSTER }}
+      ECS_WEB_SERVICE: ${{ secrets.ECS_WEB_SERVICE }}
+      ECS_BOT_SERVICE: ${{ secrets.ECS_BOT_SERVICE }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Deploy to Render
+        uses: johnbeynon/render-deploy-action@v0.0.6
+        with:
+          service-id: ${{ secrets.RENDER_SERVICE_ID }}
+          api-key: ${{ secrets.RENDER_API_KEY }}
