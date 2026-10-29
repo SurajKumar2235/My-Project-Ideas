@@ -5,6 +5,7 @@ on:
   push:
     branches:
       - feature_test
+      - main
   workflow_dispatch:
 
 # env:
