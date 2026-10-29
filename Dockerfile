@@ -3,8 +3,10 @@
 # Optimized for Amazon Container Registry (ECR), AWS ECS / Fargate, App Runner
 # ==============================================================================
 
-# Official uv image with Python 3.13 preinstalled on Debian Bookworm Slim
-FROM ghcr.io/astral-sh/uv:python3.13-bookworm-slim
+# Keep Python in /usr/local so the non-root runtime user can execute it.
+FROM python:3.13-slim-bookworm
+
+COPY --from=ghcr.io/astral-sh/uv:python3.13-bookworm-slim /uv /uvx /bin/
 
 # Install system dependencies (curl and ca-certificates for health checks & TLS)
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -19,6 +21,7 @@ WORKDIR /app
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
     UV_COMPILE_BYTECODE=1 \
+    UV_PYTHON=/usr/local/bin/python3 \
     PATH="/app/.venv/bin:$PATH" \
     PORT=8000 \
     PLANS_DIR="/data"
@@ -33,8 +36,7 @@ RUN uv sync --frozen --no-dev
 
 # Step 3: Setup runtime data directory and permissions
 RUN mkdir -p /data && \
-    chmod +x /app/entrypoint.sh && \
-    chmod a+rx /app/.venv/bin/python*
+    chmod +x /app/entrypoint.sh
 
 # Security Best Practice: Create and run under a dedicated non-root user
 RUN groupadd -r appgroup && useradd -r -g appgroup -d /app -s /sbin/nologin appuser && \
