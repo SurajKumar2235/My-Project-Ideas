@@ -4,3 +4,6 @@ __pycache__
 
 uv.lock
 .venv
+
+node_modules
+project_manager_bot.egg-info

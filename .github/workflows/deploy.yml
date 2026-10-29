@@ -1,4 +1,4 @@
-name: Deploy to Fly.io
+name: Deploy to Render
 
 on:
   push:
@@ -7,16 +7,14 @@ on:
 
 jobs:
   deploy:
-    name: Deploy Application
+    name: Deploy application to Render
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Setup Flyctl CLI
-        uses: superfly/flyctl-actions/setup-flyctl@master
-
-      - name: Deploy to Fly.io
-        run: flyctl deploy --remote-only
-        env:
-          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+      - name: Deploy to Render
+        uses: johnbeynon/render-deploy-action@v0.0.6
+        with:
+          service-id: ${{ secrets.RENDER_SERVICE_ID }}
+          api-key: ${{ secrets.RENDER_API_KEY }}
