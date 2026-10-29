@@ -34,6 +34,7 @@ async def plan_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
     user_id = update.effective_user.id
     
     idea_text = " ".join(context.args) if context.args else ""
+    print(idea_text)
     if not idea_text:
         await send_reply(
             update, context,

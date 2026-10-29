@@ -42,6 +42,39 @@ async def lifespan(app: FastAPI):
         )
         await Tortoise.generate_schemas()
         logger.info("Tortoise ORM initialized and schemas generated successfully.")
+        
+        # Deduplicate user records in DB
+        from core.models import User
+        all_users = await User.all().order_by("telegram_id", "-id")
+        seen_tg_ids = set()
+        for user_row in all_users:
+            if user_row.telegram_id:
+                if user_row.telegram_id in seen_tg_ids:
+                    logger.info(f"Removing duplicate user record ID {user_row.id} for Telegram ID {user_row.telegram_id}")
+                    try:
+                        await user_row.delete()
+                    except Exception as de:
+                        logger.warning(f"Could not delete duplicate user {user_row.id}: {de}")
+                else:
+                    seen_tg_ids.add(user_row.telegram_id)
+
+        # Initialize default superadmin users from ADMIN_USER_IDS
+        admin_ids_str = os.environ.get("ADMIN_USER_IDS", "")
+        admin_ids = [int(x.strip()) for x in admin_ids_str.split(",") if x.strip().isdigit()]
+        for admin_tg_id in admin_ids:
+            u = await User.filter(telegram_id=admin_tg_id).order_by("-id").first()
+            if u:
+                if u.role not in ("admin", "superadmin"):
+                    u.role = "superadmin"
+                    await u.save()
+                    logger.info(f"Promoted Telegram ID {admin_tg_id} to superadmin.")
+            else:
+                await User.create(
+                    telegram_id=admin_tg_id,
+                    username=f"Superadmin_{admin_tg_id}",
+                    role="superadmin"
+                )
+                logger.info(f"Created default superadmin DB record for Telegram ID {admin_tg_id}.")
     except Exception as e:
         logger.exception("Failed to initialize Tortoise ORM:")
     yield

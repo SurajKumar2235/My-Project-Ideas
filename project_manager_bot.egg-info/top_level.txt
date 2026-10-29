@@ -1,4 +1,7 @@
 api
 bot
+bot_v2
+client
 core
 migrations
+tests

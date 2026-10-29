@@ -7,7 +7,7 @@ from fastapi import APIRouter, Depends, HTTPException, status, Header, Body
 from pydantic import BaseModel
 from datetime import datetime, timezone
 from core.models import User, Draft, Lock
-from bot import groq_client
+from client import groq_client
 
 logger = logging.getLogger(__name__)
 
@@ -84,10 +84,42 @@ class ListDraftsRequest(BaseModel):
     telegram_id: int
     chat_id: int
 
+class AdminUsersRequest(BaseModel):
+    admin_telegram_id: int
+
+class SetRoleRequest(BaseModel):
+    admin_telegram_id: int
+    target_telegram_id: int
+    role: str
+
+class SetCommandsRequest(BaseModel):
+    admin_telegram_id: int
+    target_telegram_id: int
+    allowed_commands: Optional[List[str]] = None
+
+
+async def get_user_by_telegram_id(telegram_id: int) -> Optional[User]:
+    users = await User.filter(telegram_id=telegram_id).order_by("-id").all()
+    if not users:
+        return None
+    primary_user = users[0]
+    if len(users) > 1:
+        for old_u in users[1:]:
+            if not primary_user.access_token and old_u.access_token:
+                primary_user.access_token = old_u.access_token
+                if not primary_user.active_repo:
+                    primary_user.active_repo = old_u.active_repo
+                await primary_user.save()
+            try:
+                await old_u.delete()
+            except Exception as e:
+                logger.warning(f"Failed to delete duplicate user record {old_u.id}: {e}")
+    return primary_user
+
 
 @router.post("/drafts/list", summary="List Drafts for Telegram user")
 async def list_drafts(body: ListDraftsRequest, _ = Depends(verify_bot_token)):
-    user = await User.get_or_none(telegram_id=body.telegram_id)
+    user = await get_user_by_telegram_id(body.telegram_id)
     if not user:
         return {"drafts": []}
     drafts = await Draft.filter(user=user, chat_id=body.chat_id).all()
@@ -120,28 +152,41 @@ async def get_user_github_context(user: User):
 
 @router.post("/identify", summary="Identify Telegram User Status")
 async def identify_user(body: IdentifyRequest, _ = Depends(verify_bot_token)):
-    user = await User.get_or_none(telegram_id=body.telegram_id)
+    user = await get_user_by_telegram_id(body.telegram_id)
+    
+    admin_ids_str = os.environ.get("ADMIN_USER_IDS", "")
+    admin_ids = [int(x.strip()) for x in admin_ids_str.split(",") if x.strip().isdigit()]
+
+    if user and body.telegram_id in admin_ids and user.role not in ("admin", "superadmin"):
+        user.role = "superadmin"
+        await user.save()
+
+    is_admin = (user and user.role in ("admin", "superadmin")) or (body.telegram_id in admin_ids)
+
     if not user:
         return {
             "authenticated": False,
+            "is_admin": is_admin,
             "message": "User not registered in the system."
         }
     
     return {
         "authenticated": user.access_token is not None,
+        "is_admin": is_admin,
         "user": {
             "id": user.id,
             "username": user.username,
             "github_id": user.github_id,
             "active_repo": user.active_repo,
-            "role": user.role
+            "role": user.role,
+            "allowed_commands": user.allowed_commands
         }
     }
 
 
 @router.post("/logout", summary="Logout and Disassociate GitHub Account")
 async def logout_bot_user(body: IdentifyRequest, _ = Depends(verify_bot_token)):
-    user = await User.get_or_none(telegram_id=body.telegram_id)
+    user = await get_user_by_telegram_id(body.telegram_id)
     if not user:
         return {
             "status": "success",
@@ -159,7 +204,6 @@ async def logout_bot_user(body: IdentifyRequest, _ = Depends(verify_bot_token)):
     }
 
 
-
 @router.post("/login-link", summary="Generate GitHub OAuth Redirection Link")
 async def get_login_link(body: LoginLinkRequest, _ = Depends(verify_bot_token)):
     website_url = os.environ.get("WEBSITE_URL") or os.environ.get("BASE_URL") or "http://localhost:8000"
@@ -172,8 +216,10 @@ async def get_login_link(body: LoginLinkRequest, _ = Depends(verify_bot_token)):
 
 @router.post("/repos", summary="List Repositories for Telegram User")
 async def list_bot_user_repos(body: IdentifyRequest, _ = Depends(verify_bot_token)):
-    user = await User.get_or_none(telegram_id=body.telegram_id)
-    if not user or not user.access_token:
+    user = await get_user_by_telegram_id(body.telegram_id)
+    token = (user.access_token if user else None) or os.environ.get("GITHUB_TOKEN", "")
+
+    if not token:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="User not authenticated. Link GitHub account first."
@@ -182,23 +228,22 @@ async def list_bot_user_repos(body: IdentifyRequest, _ = Depends(verify_bot_toke
     url = "https://api.github.com/user/repos"
     params = {"sort": "updated", "per_page": 20}
     headers = {
-        "Authorization": f"token {user.access_token}",
+        "Authorization": f"token {token}",
         "Accept": "application/vnd.github+json"
     }
 
     async with httpx.AsyncClient(timeout=10.0) as client:
         resp = await client.get(url, headers=headers, params=params)
         if resp.status_code != 200:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"GitHub API Error: {resp.text}"
-            )
+            # Fall back to default repo if user repos call fails
+            default_repo = os.environ.get("GITHUB_REPO", "")
+            return {"status": "success", "repos": [default_repo] if default_repo else []}
+
         repos = resp.json()
         result = []
         for r in repos:
-            # Check push/write access
             perms = r.get("permissions", {})
-            if perms.get("push", False) or perms.get("admin", False):
+            if perms.get("push", False) or perms.get("admin", False) or perms.get("pull", True):
                 result.append(r.get("full_name"))
         return {
             "status": "success",
@@ -208,46 +253,40 @@ async def list_bot_user_repos(body: IdentifyRequest, _ = Depends(verify_bot_toke
 
 @router.post("/select_repo", summary="Select Active Repository for Telegram User")
 async def select_bot_user_repo(body: SelectRepoRequest, _ = Depends(verify_bot_token)):
-
-    user = await User.get_or_none(telegram_id=body.telegram_id)
-    # print("User:", user)
-    if not user or not user.access_token:
+    user = await get_user_by_telegram_id(body.telegram_id)
+    if not user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="User not authenticated."
+            detail="User not registered. Please link your GitHub account using /login."
         )
 
     repo_name = body.repo.strip()
-    # Check permissions
-    url = f"https://api.github.com/repos/{repo_name}"
-    headers = {
-        "Authorization": f"token {user.access_token}",
-        "Accept": "application/vnd.github+json"
-    }
-    # print("URL:", url)
-    # print("Headers:", headers)
-    async with httpx.AsyncClient(timeout=10.0) as client:
-        resp = await client.get(url, headers=headers)
-        print("Response:", resp.text)
-        if resp.status_code != 200:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Repository not found or access denied: {resp.text}"
-            )
-        repo_data = resp.json()
-        perms = repo_data.get("permissions", {})
-        if not (perms.get("push") or perms.get("admin")):
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="You must have write/push access to select this repository."
-            )
-    print(repo_name)
+    token = user.access_token or os.environ.get("GITHUB_TOKEN", "")
+
+    if token:
+        url = f"https://api.github.com/repos/{repo_name}"
+        headers = {
+            "Authorization": f"token {token}",
+            "Accept": "application/vnd.github+json"
+        }
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            resp = await client.get(url, headers=headers)
+            if resp.status_code == 200:
+                repo_data = resp.json()
+                perms = repo_data.get("permissions", {})
+                if perms and not (perms.get("push") or perms.get("admin") or perms.get("pull")):
+                    raise HTTPException(
+                        status_code=status.HTTP_403_FORBIDDEN,
+                        detail="You must have access to select this repository."
+                    )
+
     user.active_repo = repo_name
     await user.save()
 
     return {
         "status": "success",
-        "active_repo": repo_name
+        "active_repo": repo_name,
+        "username": user.username or "User"
     }
 
 
@@ -362,7 +401,7 @@ async def update_draft_content(body: UpdateDraftRequest, _ = Depends(verify_bot_
 
 @router.post("/push", summary="Push Draft to GitHub Issue")
 async def push_draft_to_github(body: PushRequest, _ = Depends(verify_bot_token)):
-    user = await User.get_or_none(telegram_id=body.telegram_id)
+    user = await get_user_by_telegram_id(body.telegram_id)
     if not user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -448,7 +487,7 @@ def parse_tasks_from_markdown(markdown_content: str) -> list[str]:
 
 @router.post("/create_task", summary="Create Single Task or Parse Draft tasks")
 async def create_task(body: CreateTaskRequest, _ = Depends(verify_bot_token)):
-    user = await User.get_or_none(telegram_id=body.telegram_id)
+    user = await get_user_by_telegram_id(body.telegram_id)
     if not user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -540,7 +579,7 @@ async def create_task(body: CreateTaskRequest, _ = Depends(verify_bot_token)):
 
 @router.post("/board", summary="Get Kanban Board for Telegram user")
 async def get_bot_board(body: IdentifyRequest, _ = Depends(verify_bot_token)):
-    user = await User.get_or_none(telegram_id=body.telegram_id)
+    user = await get_user_by_telegram_id(body.telegram_id)
     if not user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -654,7 +693,7 @@ async def sync_issue_state_to_github(issue_number: int, github_username: str | N
 
 @router.post("/board/claim", summary="Claim a Kanban Card")
 async def claim_board_card(body: ClaimCardRequest, _ = Depends(verify_bot_token)):
-    user = await User.get_or_none(telegram_id=body.telegram_id)
+    user = await get_user_by_telegram_id(body.telegram_id)
     if not user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -696,7 +735,7 @@ async def claim_board_card(body: ClaimCardRequest, _ = Depends(verify_bot_token)
 
 @router.post("/board/release", summary="Release a claimed Kanban Card")
 async def release_board_card(body: ReleaseCardRequest, _ = Depends(verify_bot_token)):
-    user = await User.get_or_none(telegram_id=body.telegram_id)
+    user = await get_user_by_telegram_id(body.telegram_id)
     if not user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -733,7 +772,7 @@ async def release_board_card(body: ReleaseCardRequest, _ = Depends(verify_bot_to
 
 @router.post("/board/done", summary="Mark claimed Kanban Card Completed")
 async def done_board_card(body: DoneCardRequest, _ = Depends(verify_bot_token)):
-    user = await User.get_or_none(telegram_id=body.telegram_id)
+    user = await get_user_by_telegram_id(body.telegram_id)
     if not user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -761,3 +800,88 @@ async def done_board_card(body: DoneCardRequest, _ = Depends(verify_bot_token)):
         logger.error(f"GitHub done sync failed: {e}")
 
     return {"result": "marked_done"}
+
+
+# --- Admin Management Endpoints ---
+
+async def verify_admin_access(telegram_id: int) -> User:
+    admin_ids_str = os.environ.get("ADMIN_USER_IDS", "")
+    admin_ids = [int(x.strip()) for x in admin_ids_str.split(",") if x.strip().isdigit()]
+    
+    user = await User.get_or_none(telegram_id=telegram_id)
+    is_admin = (user and user.role in ("admin", "superadmin")) or (telegram_id in admin_ids)
+    if not is_admin:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Admin privileges required."
+        )
+    return user
+
+
+@router.post("/admin/users", summary="List All Registered Bot Users")
+async def list_admin_users(body: AdminUsersRequest, _ = Depends(verify_bot_token)):
+    await verify_admin_access(body.admin_telegram_id)
+    users = await User.all()
+    
+    admin_ids_str = os.environ.get("ADMIN_USER_IDS", "")
+    admin_ids = [int(x.strip()) for x in admin_ids_str.split(",") if x.strip().isdigit()]
+
+    result = []
+    for u in users:
+        role = u.role
+        if u.telegram_id in admin_ids and role == "user":
+            role = "superadmin"
+        result.append({
+            "id": u.id,
+            "telegram_id": u.telegram_id,
+            "username": u.username,
+            "email": u.email,
+            "role": role,
+            "active_repo": u.active_repo,
+            "allowed_commands": u.allowed_commands,
+            "is_connected": u.access_token is not None
+        })
+    return {"status": "success", "users": result}
+
+
+@router.post("/admin/set_role", summary="Set User Role")
+async def set_user_role(body: SetRoleRequest, _ = Depends(verify_bot_token)):
+    await verify_admin_access(body.admin_telegram_id)
+    
+    target_user = await User.get_or_none(telegram_id=body.target_telegram_id)
+    if not target_user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"User with Telegram ID {body.target_telegram_id} not found."
+        )
+    
+    role = body.role.lower().strip()
+    if role not in ("user", "admin", "superadmin"):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Role must be one of: user, admin, superadmin"
+        )
+    
+    target_user.role = role
+    await target_user.save()
+    return {"status": "success", "telegram_id": body.target_telegram_id, "new_role": role}
+
+
+@router.post("/admin/set_commands", summary="Set User Allowed Commands")
+async def set_user_commands(body: SetCommandsRequest, _ = Depends(verify_bot_token)):
+    await verify_admin_access(body.admin_telegram_id)
+    
+    target_user = await User.get_or_none(telegram_id=body.target_telegram_id)
+    if not target_user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"User with Telegram ID {body.target_telegram_id} not found."
+        )
+    
+    target_user.allowed_commands = body.allowed_commands
+    await target_user.save()
+    return {
+        "status": "success",
+        "telegram_id": body.target_telegram_id,
+        "allowed_commands": body.allowed_commands
+    }

@@ -8,7 +8,8 @@ except ImportError:  # pragma: no cover - fallback for deployment images without
     def load_dotenv() -> bool:
         return False
 
-from bot import db, github_client
+from bot import db
+from client import github_client
 
 load_dotenv()
 
