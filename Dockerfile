@@ -33,7 +33,8 @@ RUN uv sync --frozen --no-dev
 
 # Step 3: Setup runtime data directory and permissions
 RUN mkdir -p /data && \
-    chmod +x /app/entrypoint.sh
+    chmod +x /app/entrypoint.sh && \
+    chmod a+rx /app/.venv/bin/python*
 
 # Security Best Practice: Create and run under a dedicated non-root user
 RUN groupadd -r appgroup && useradd -r -g appgroup -d /app -s /sbin/nologin appuser && \

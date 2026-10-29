@@ -12,7 +12,7 @@ set -e
 # Optionally run Aerich database migrations if requested
 if [ "${RUN_MIGRATIONS,,}" = "true" ]; then
     echo "🔄 [Entrypoint] Running Aerich database migrations..."
-    uv run aerich upgrade || echo "⚠️ [Entrypoint] Migration step skipped or database already initialized."
+    aerich upgrade || echo "⚠️ [Entrypoint] Migration step skipped or database already initialized."
 fi
 
 # Determine target execution mode from $1 argument or $APP_ROLE / $MODE environment variables
@@ -21,24 +21,24 @@ MODE="${1:-${APP_ROLE:-${MODE:-both}}}"
 case "$MODE" in
     web)
         echo "🌐 [Entrypoint] Starting FastAPI Web Server on port ${PORT:-8000} (Scalable Mode)..."
-        exec uv run uvicorn api.main:app --host 0.0.0.0 --port "${PORT:-8000}"
+        exec uvicorn api.main:app --host 0.0.0.0 --port "${PORT:-8000}"
         ;;
 
     bot)
         echo "🤖 [Entrypoint] Starting Telegram Bot (Single Instance Mode)..."
-        exec uv run python bot_v2/main.py
+        exec python bot_v2/main.py
         ;;
 
     both|all)
         echo "🚀 [Entrypoint] Starting both FastAPI Web Server (port ${PORT:-8000}) and Telegram Bot..."
 
         # Start Web API in background
-        uv run uvicorn api.main:app --host 0.0.0.0 --port "${PORT:-8000}" &
+        uvicorn api.main:app --host 0.0.0.0 --port "${PORT:-8000}" &
         API_PID=$!
         echo "   -> Web API server started with PID $API_PID"
 
         # Start Telegram Bot in background
-        uv run python bot_v2/main.py &
+        python bot_v2/main.py &
         BOT_PID=$!
         echo "   -> Telegram Bot started with PID $BOT_PID"
 
@@ -64,4 +64,3 @@ case "$MODE" in
         exec "$@"
         ;;
 esac
-
