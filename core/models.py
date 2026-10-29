@@ -12,13 +12,14 @@ class User(Model):
     telegram_user_obj = fields.JSONField(null=True)
     active_repo = fields.CharField(max_length=255, null=True)
     role = fields.CharField(max_length=50, default="user")
+    allowed_commands = fields.JSONField(null=True)
     created_at = fields.DatetimeField(auto_now_add=True)
 
     class Meta:
         table = "users"
 
     def __str__(self):
-        return f"{self.username}:{self.telegram_id}:{self.email}:{self.avatar_url}:{self.role}"
+        return f"{self.username}:{self.telegram_id}:{self.email}:{self.role}:{self.allowed_commands}"
 
 
 class ChannelRepo(Model):
