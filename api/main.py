@@ -75,8 +75,9 @@ async def lifespan(app: FastAPI):
                     role="superadmin"
                 )
                 logger.info(f"Created default superadmin DB record for Telegram ID {admin_tg_id}.")
-    except Exception as e:
+    except Exception:
         logger.exception("Failed to initialize Tortoise ORM:")
+        raise
     yield
     logger.info("Closing Tortoise ORM connections...")
     await Tortoise.close_connections()
@@ -179,4 +180,3 @@ async def health_check():
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run("api.main:app", host="0.0.0.0", port=8000, reload=True)
-
