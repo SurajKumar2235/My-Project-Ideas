@@ -6,13 +6,14 @@
 # Keep Python in /usr/local so the non-root runtime user can execute it.
 FROM python:3.13-slim-bookworm
 
-COPY --from=ghcr.io/astral-sh/uv:python3.13-bookworm-slim /uv /uvx /bin/
-
 # Install system dependencies (curl and ca-certificates for health checks & TLS)
 RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
     ca-certificates \
     && rm -rf /var/lib/apt/lists/*
+
+# Install uv into the base image instead of relying on paths in the uv image.
+RUN pip install --no-cache-dir uv
 
 # Configure container working directory
 WORKDIR /app
